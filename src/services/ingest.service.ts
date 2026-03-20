@@ -1,35 +1,98 @@
+import { supabase } from '@/lib/supabase'
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
-import type { IngestDocRequest, IngestDocResponse } from '@/types/api'
+import type { ProcessIngestJobResponse } from '@/types/api'
 
 /**
- * Reads a File object and sends its text content to the ingest-doc Edge Function.
- * Returns the document ID, chunk count, and number of lessons auto-generated.
+ * Uploads a file to the `doc-uploads` Storage bucket and inserts a pending
+ * ingest_jobs row via PowerSync. Then fires the `process-ingest-job` Edge
+ * Function to handle chunking, embedding, and lesson extraction async.
+ *
+ * @returns The ingest job ID (UUID) for tracking.
  */
-export async function ingestFile(
+export async function uploadFileToQueue(
+  db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
   projectId: string,
   file: File,
   category: string
-): Promise<IngestDocResponse> {
-  const rawText = await file.text()
+): Promise<string> {
+  const jobId = crypto.randomUUID()
+  const storagePath = `${projectId}/${jobId}-${file.name}`
 
-  const body: IngestDocRequest = {
-    project_id: projectId,
-    path: file.name,
-    title: file.name.replace(/\.[^.]+$/, ''),
-    category,
-    raw_text: rawText,
+  // 1. Upload file to Supabase Storage bucket
+  const { error: uploadError } = await supabase.storage
+    .from('doc-uploads')
+    .upload(storagePath, file, { upsert: false })
+
+  if (uploadError) {
+    throw new Error(`Storage upload failed: ${uploadError.message}`)
   }
 
-  const res = await fetch(`${EDGE_FUNCTIONS_URL}/ingest-doc`, {
+  // 2. Insert ingest_jobs row via PowerSync (local-first)
+  const now = new Date().toISOString()
+  await db.execute(
+    `INSERT INTO ingest_jobs (id, project_id, storage_path, file_name, category, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    [jobId, projectId, storagePath, file.name, category, now, now]
+  )
+
+  // 3. Fire Edge Function (non-blocking — job status updates via PowerSync sync)
+  fireProcessJob(jobId).catch((err) =>
+    console.error(`[ingest] Failed to fire process-ingest-job for ${jobId}:`, err)
+  )
+
+  return jobId
+}
+
+/**
+ * Retries a failed ingest job by resetting its status to 'pending'
+ * and re-firing the processing Edge Function.
+ */
+export async function retryIngestJob(
+  db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
+  jobId: string
+): Promise<void> {
+  const now = new Date().toISOString()
+  await db.execute(
+    `UPDATE ingest_jobs SET status = 'pending', error = NULL, updated_at = ? WHERE id = ?`,
+    [now, jobId]
+  )
+
+  fireProcessJob(jobId).catch((err) =>
+    console.error(`[ingest] Failed to fire retry for ${jobId}:`, err)
+  )
+}
+
+/**
+ * Cancels a pending ingest job by deleting the storage file and removing
+ * the job row from the local DB.
+ */
+export async function cancelIngestJob(
+  db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
+  jobId: string,
+  storagePath: string
+): Promise<void> {
+  // Remove file from bucket (best-effort)
+  await supabase.storage.from('doc-uploads').remove([storagePath])
+
+  // Delete the job row via PowerSync
+  await db.execute('DELETE FROM ingest_jobs WHERE id = ?', [jobId])
+}
+
+/**
+ * Fires the process-ingest-job Edge Function.
+ * Intentionally does not await — status updates arrive via PowerSync sync.
+ */
+async function fireProcessJob(jobId: string): Promise<ProcessIngestJobResponse> {
+  const res = await fetch(`${EDGE_FUNCTIONS_URL}/process-ingest-job`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ job_id: jobId }),
   })
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Ingest failed for ${file.name} (${res.status}): ${text}`)
+    throw new Error(`process-ingest-job failed (${res.status}): ${text}`)
   }
 
-  return res.json() as Promise<IngestDocResponse>
+  return res.json() as Promise<ProcessIngestJobResponse>
 }

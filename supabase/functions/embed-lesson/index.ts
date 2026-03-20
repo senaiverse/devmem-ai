@@ -1,0 +1,68 @@
+/**
+ * embed-lesson Edge Function
+ *
+ * (Re-)generates a 384-dimension embedding for a lesson after a manual
+ * create or edit. The embedding is stored in the `lesson_embeddings` table,
+ * replacing any previous embedding for the same lesson.
+ *
+ * Request body: `{ lesson_id: string }`
+ */
+import { handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts';
+import { createAdminClient } from '../_shared/supabase-client.ts';
+import { generateEmbedding } from '../_shared/embeddings.ts';
+
+Deno.serve(async (req) => {
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
+
+  try {
+    const { lesson_id } = await req.json();
+
+    if (!lesson_id) {
+      return errorResponse('Missing required field: lesson_id');
+    }
+
+    const supabase = createAdminClient();
+
+    // 1. Fetch the lesson
+    const { data: lesson, error: fetchError } = await supabase
+      .from('lessons')
+      .select('id, title, problem, solution, recommendation')
+      .eq('id', lesson_id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (!lesson) {
+      return errorResponse(`Lesson ${lesson_id} not found`, 404);
+    }
+
+    // 2. Compose embedding text from relevant lesson fields
+    const text = [lesson.title, lesson.problem, lesson.solution, lesson.recommendation]
+      .filter(Boolean)
+      .join(' ');
+
+    // 3. Generate the embedding vector
+    const embedding = await generateEmbedding(text);
+
+    // 4. Upsert into lesson_embeddings (delete + insert to avoid conflicts)
+    await supabase
+      .from('lesson_embeddings')
+      .delete()
+      .eq('lesson_id', lesson_id);
+
+    const { error: insertError } = await supabase
+      .from('lesson_embeddings')
+      .insert({
+        lesson_id,
+        embedding: JSON.stringify(embedding),
+      });
+
+    if (insertError) throw insertError;
+
+    return jsonResponse({ lesson_id, success: true });
+  } catch (error) {
+    console.error('embed-lesson error:', error);
+    return errorResponse(`Embedding failed: ${(error as Error).message}`, 500);
+  }
+});

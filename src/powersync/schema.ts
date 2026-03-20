@@ -39,10 +39,26 @@ const questions = new Table(
   { indexes: { project: ['project_id'] } }
 );
 
-export const appSchema = new Schema({ projects, lessons, questions });
+const ingest_jobs = new Table(
+  {
+    project_id: column.text,
+    storage_path: column.text,
+    file_name: column.text,
+    category: column.text,
+    status: column.text,
+    error: column.text,
+    document_id: column.text,
+    created_at: column.text,
+    updated_at: column.text,
+  },
+  { indexes: { project: ['project_id'], status: ['status'] } }
+);
+
+export const appSchema = new Schema({ projects, lessons, questions, ingest_jobs });
 
 /** Derive TypeScript row types directly from the schema. */
 export type Database = (typeof appSchema)['types'];
 export type ProjectRow = Database['projects'];
 export type LessonRow = Database['lessons'];
 export type QuestionRow = Database['questions'];
+export type IngestJobRow = Database['ingest_jobs'];

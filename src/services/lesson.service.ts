@@ -1,5 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
-import type { CreateLessonRequest } from '@/types/api'
+import type { CreateLessonRequest, EmbedLessonResponse } from '@/types/api'
 import type { Lesson } from '@/types/lesson'
 
 /**
@@ -22,4 +22,23 @@ export async function createLessonFromChange(
   }
 
   return res.json() as Promise<Lesson>
+}
+
+/**
+ * Triggers embedding (re-)generation for a lesson via the embed-lesson Edge Function.
+ * Called after manual lesson creation or edit to ensure the lesson is searchable.
+ */
+export async function embedLesson(lessonId: string): Promise<EmbedLessonResponse> {
+  const res = await fetch(`${EDGE_FUNCTIONS_URL}/embed-lesson`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lesson_id: lessonId }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`embed-lesson failed (${res.status}): ${text}`)
+  }
+
+  return res.json() as Promise<EmbedLessonResponse>
 }

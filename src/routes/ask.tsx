@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@powersync/react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { AskForm } from '@/components/questions/ask-form'
 import { AnswerDisplay } from '@/components/questions/answer-display'
@@ -32,9 +32,9 @@ export function AskPage() {
             <p className="text-sm text-muted-foreground">{project.name}</p>
           )}
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link to={`/projects/${id}`}>Back to Project</Link>
-        </Button>
+        <Link to={`/projects/${id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          Back to Project
+        </Link>
       </div>
 
       <AskForm onSubmit={search} isSearching={isSearching} />

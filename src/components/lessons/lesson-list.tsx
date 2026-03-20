@@ -4,6 +4,7 @@ import { LessonCard } from './lesson-card'
 import { LessonDetailSheet } from './lesson-detail-sheet'
 import { LessonFilters } from './lesson-filters'
 import type { Lesson } from '@/types/lesson'
+import type { LessonWriteFields } from '@/hooks/use-lessons'
 
 interface LessonListProps {
   lessons: Lesson[]
@@ -13,10 +14,13 @@ interface LessonListProps {
   onSearchChange: (value: string) => void
   filterTag: string
   onFilterTagChange: (tag: string) => void
+  onUpdateLesson?: (lessonId: string, fields: Partial<LessonWriteFields>) => Promise<void>
+  onDeleteLesson?: (lessonId: string) => Promise<void>
 }
 
 /**
  * Filterable list of lesson cards with a detail side panel.
+ * Optionally supports edit/delete via mutation callbacks.
  */
 export function LessonList({
   lessons,
@@ -26,6 +30,8 @@ export function LessonList({
   onSearchChange,
   filterTag,
   onFilterTagChange,
+  onUpdateLesson,
+  onDeleteLesson,
 }: LessonListProps) {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
 
@@ -69,6 +75,8 @@ export function LessonList({
         onOpenChange={(open) => {
           if (!open) setSelectedLesson(null)
         }}
+        onUpdate={onUpdateLesson}
+        onDelete={onDeleteLesson}
       />
     </div>
   )
