@@ -21,10 +21,10 @@ export function Sidebar() {
       <div className="flex h-14 items-center border-b px-4">
         <Link to="/projects" className="flex items-center gap-2 font-semibold">
           <Brain className="h-5 w-5 text-primary" />
-          <span className="text-lg">Dev Memory Ledger</span>
+          <span className="text-lg">DevMem AI</span>
         </Link>
       </div>
-      <ScrollArea className="h-[calc(100vh-3.5rem)]">
+      <ScrollArea className="h-[calc(100dvh-3.5rem)]">
         <div className="p-4">
           <Link
             to="/projects"
@@ -53,12 +53,12 @@ export function Sidebar() {
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                {project.name}
+                <span className="truncate" title={project.name}>{project.name}</span>
               </Link>
             ))}
             {projects.length === 0 && (
               <p className="px-3 py-2 text-sm text-muted-foreground">
-                No projects yet
+                No projects yet. Create one from the Projects page.
               </p>
             )}
           </nav>

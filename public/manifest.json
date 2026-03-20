@@ -1,0 +1,16 @@
+{
+  "name": "DevMem AI",
+  "short_name": "DevMem",
+  "description": "Local-first AI memory for your codebases",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

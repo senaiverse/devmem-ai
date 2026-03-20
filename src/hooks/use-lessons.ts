@@ -1,8 +1,8 @@
 import { useMemo, useCallback } from 'react'
 import { useQuery, usePowerSync } from '@powersync/react'
-import { v4 as uuidv4 } from 'uuid'
 import type { Lesson } from '@/types/lesson'
 import { parseTags } from '@/types/lesson'
+import { toast } from 'sonner'
 import { embedLesson } from '@/services/lesson.service'
 
 /** Fields accepted for creating or updating a lesson via PowerSync. */
@@ -62,7 +62,7 @@ export function useLessons(projectId: string, searchTerm = '', filterTag = '') {
   /** Creates a manual lesson in PowerSync and triggers embedding. */
   const createLesson = useCallback(
     async (fields: LessonWriteFields): Promise<string> => {
-      const id = uuidv4()
+      const id = crypto.randomUUID()
       const now = new Date().toISOString()
 
       await db.execute(
@@ -81,9 +81,11 @@ export function useLessons(projectId: string, searchTerm = '', filterTag = '') {
         ]
       )
 
+      toast.success('Lesson created')
+
       // Fire embedding generation (non-blocking)
-      embedLesson(id).catch((err) =>
-        console.error(`[useLessons] embed failed for ${id}:`, err)
+      embedLesson(id).catch(() =>
+        toast.warning('Lesson saved, but search indexing failed. It may not appear in search results.')
       )
 
       return id
@@ -130,9 +132,11 @@ export function useLessons(projectId: string, searchTerm = '', filterTag = '') {
         values
       )
 
+      toast.success('Lesson updated')
+
       // Re-embed after update (non-blocking)
-      embedLesson(lessonId).catch((err) =>
-        console.error(`[useLessons] re-embed failed for ${lessonId}:`, err)
+      embedLesson(lessonId).catch(() =>
+        toast.warning('Lesson saved, but search indexing failed. It may not appear in search results.')
       )
     },
     [db]
@@ -142,6 +146,7 @@ export function useLessons(projectId: string, searchTerm = '', filterTag = '') {
   const deleteLesson = useCallback(
     async (lessonId: string): Promise<void> => {
       await db.execute('DELETE FROM lessons WHERE id = ?', [lessonId])
+      toast.success('Lesson deleted')
     },
     [db]
   )

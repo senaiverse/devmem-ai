@@ -86,6 +86,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('ingest-doc error:', error);
-    return errorResponse(`Ingestion failed: ${error.message}`, 500);
+    return errorResponse(`Ingestion failed: ${(error as Error).message ?? 'Unknown error'}`, 500);
   }
 });

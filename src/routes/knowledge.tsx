@@ -3,7 +3,9 @@ import { useQuery } from '@powersync/react'
 import { buttonVariants } from '@/components/ui/button'
 import { DocumentTable } from '@/components/knowledge/document-table'
 import { ErrorAlert } from '@/components/shared/error-alert'
+import { OfflineBanner } from '@/components/projects/offline-banner'
 import { useDocuments } from '@/hooks/use-documents'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import type { Project } from '@/types/project'
 
 /**
@@ -16,10 +18,11 @@ export function KnowledgePage() {
     [id!]
   )
   const project = projectRows[0] ?? null
+  const { isOnline } = useSyncStatus()
   const { documents, isLoading, error, deleteDocument } = useDocuments(id!)
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="animate-page-enter mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Knowledge Base</h1>
@@ -31,6 +34,11 @@ export function KnowledgePage() {
           Back to Project
         </Link>
       </div>
+
+      <OfflineBanner
+        isOnline={isOnline}
+        message="You're offline. Document management requires a network connection."
+      />
 
       <ErrorAlert message={error} />
 

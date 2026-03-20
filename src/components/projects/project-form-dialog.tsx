@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
 
 interface ProjectFormDialogProps {
@@ -41,6 +42,8 @@ export function ProjectFormDialog({ onSubmit }: ProjectFormDialogProps) {
       setName('')
       setDescription('')
       setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create project')
     } finally {
       setIsSubmitting(false)
     }

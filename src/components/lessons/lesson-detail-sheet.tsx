@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { EditLessonForm } from './edit-lesson-form'
 import { CopyPromptButton } from './copy-prompt-button'
 import type { Lesson } from '@/types/lesson'
@@ -36,7 +38,8 @@ interface LessonDetailSheetProps {
 }
 
 /**
- * Side panel showing full lesson detail with edit and delete capabilities.
+ * Centered dialog showing full lesson detail with edit and delete capabilities.
+ * Header stays fixed; content area scrolls independently.
  */
 export function LessonDetailSheet({
   lesson,
@@ -47,6 +50,7 @@ export function LessonDetailSheet({
   projectName,
 }: LessonDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   if (!lesson) return null
 
@@ -60,41 +64,63 @@ export function LessonDetailSheet({
 
   async function handleDelete() {
     if (!onDelete || !lesson) return
-    await onDelete(lesson.id)
-    onOpenChange(false)
+    setIsDeleting(true)
+    try {
+      await onDelete(lesson.id)
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete lesson')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
-    <Sheet
+    <Dialog
       open={open}
       onOpenChange={(o) => {
         if (!o) setIsEditing(false)
         onOpenChange(o)
       }}
     >
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-xl" showCloseButton={false}>
+        {/* Sticky header */}
+        <DialogHeader>
           <div className="flex items-start justify-between gap-2">
-            <SheetTitle className="flex-1">{lesson.title}</SheetTitle>
+            <DialogTitle className="flex-1">{lesson.title}</DialogTitle>
             {!isEditing && (
               <div className="flex gap-1">
                 {projectName && (
                   <CopyPromptButton lesson={lesson} projectName={projectName} />
                 )}
                 {onUpdate && (
-                  <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} aria-label="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} aria-label="Edit" />
+                      }
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>Edit lesson</TooltipContent>
+                  </Tooltip>
                 )}
                 {onDelete && (
                   <AlertDialog>
-                    <AlertDialogTrigger
-                      render={
-                        <Button variant="ghost" size="icon" aria-label="Delete">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      }
-                    />
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <AlertDialogTrigger
+                            render={
+                              <Button variant="ghost" size="icon" aria-label="Delete" />
+                            }
+                          />
+                        }
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </TooltipTrigger>
+                      <TooltipContent>Delete lesson</TooltipContent>
+                    </Tooltip>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Lesson</AlertDialogTitle>
@@ -104,18 +130,24 @@ export function LessonDetailSheet({
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                          {isDeleting ? (
+                            <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Deleting...</>
+                          ) : (
+                            'Delete'
+                          )}
+                        </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
               </div>
             )}
-
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="mt-4 space-y-4">
+        {/* Scrollable content area */}
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 pb-2">
           {isEditing && onUpdate ? (
             <EditLessonForm
               lesson={lesson}
@@ -150,8 +182,8 @@ export function LessonDetailSheet({
             </>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 

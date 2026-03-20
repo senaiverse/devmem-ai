@@ -236,8 +236,21 @@ Deno.serve(async (req) => {
 
     await updateJobProgress(supabase, jobId, PROGRESS.DOC_UPSERTED);
 
-    // 7. Delete old chunks for this document
+    // 7. Delete old chunks and lessons for this document (re-ingest cleanup)
     await supabase.from('document_chunks').delete().eq('document_id', documentId);
+
+    // Clean up old lessons extracted from this document (cascade deletes embeddings + classifications)
+    const { data: oldLessons } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('source_ref', documentId)
+      .eq('source_type', 'document');
+    if (oldLessons && oldLessons.length > 0) {
+      const oldIds = oldLessons.map((l: { id: string }) => l.id);
+      await supabase.from('lesson_embeddings').delete().in('lesson_id', oldIds);
+      await supabase.from('lessons').delete().in('id', oldIds);
+    }
+
     await updateJobProgress(supabase, jobId, PROGRESS.OLD_CHUNKS_DELETED);
 
     // 8. Chunk the text

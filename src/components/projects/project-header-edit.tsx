@@ -3,6 +3,7 @@ import { Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 
 export interface ProjectHeaderEditProps {
@@ -123,15 +124,22 @@ export function ProjectHeaderEdit({ name, description, onSave }: ProjectHeaderEd
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={handleStartEdit}
-        aria-label="Edit project name and description"
-        className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100 focus:opacity-100"
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleStartEdit}
+              aria-label="Edit project name and description"
+              className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100 focus:opacity-100"
+            />
+          }
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </TooltipTrigger>
+        <TooltipContent>Edit project name and description</TooltipContent>
+      </Tooltip>
     </div>
   )
 }

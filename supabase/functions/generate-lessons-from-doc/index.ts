@@ -74,6 +74,18 @@ Deno.serve(async (req) => {
       return errorResponse('Document content is too short for lesson extraction', 400);
     }
 
+    // 2b. Clean up existing lessons for this document before re-generating
+    const { data: oldLessons } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('source_ref', document_id)
+      .eq('source_type', 'document');
+    if (oldLessons && oldLessons.length > 0) {
+      const oldIds = oldLessons.map((l: { id: string }) => l.id);
+      await supabase.from('lesson_embeddings').delete().in('lesson_id', oldIds);
+      await supabase.from('lessons').delete().in('id', oldIds);
+    }
+
     // 3. Prompt Gemini for 1-5 structured lessons
     const client = createGeminiClient();
     const prompt = `You are a software engineering knowledge extractor. Analyze this document thoroughly and extract 1-5 structured lessons that capture key decisions, patterns, solutions, or best practices.
@@ -110,17 +122,20 @@ Return ONLY the JSON array, no markdown fencing.`;
       try {
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .insert({
-            project_id: project.id,
-            title: lesson.title,
-            problem: lesson.problem,
-            root_cause: lesson.root_cause,
-            solution: lesson.solution,
-            recommendation: lesson.recommendation,
-            tags: lesson.tags || [],
-            source_type: 'document',
-            source_ref: document_id,
-          })
+          .upsert(
+            {
+              project_id: project.id,
+              title: lesson.title,
+              problem: lesson.problem,
+              root_cause: lesson.root_cause,
+              solution: lesson.solution,
+              recommendation: lesson.recommendation,
+              tags: lesson.tags || [],
+              source_type: 'document',
+              source_ref: document_id,
+            },
+            { onConflict: 'project_id,title', ignoreDuplicates: false },
+          )
           .select('id')
           .single();
 
@@ -137,10 +152,10 @@ Return ONLY the JSON array, no markdown fencing.`;
           .join(' ');
         const embedding = await generateEmbedding(embeddingText);
 
-        await supabase.from('lesson_embeddings').insert({
-          lesson_id: lessonData.id,
-          embedding: JSON.stringify(embedding),
-        });
+        await supabase.from('lesson_embeddings').upsert(
+          { lesson_id: lessonData.id, embedding: JSON.stringify(embedding) },
+          { onConflict: 'lesson_id' },
+        );
 
         // Classify antipatterns (non-fatal)
         const classification = await classifyLesson({

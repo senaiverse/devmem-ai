@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Markdown } from '@/components/ui/markdown'
 import { ErrorResultDisplay } from './error-result-display'
 import type { SearchResponse } from '@/types/api'
 
@@ -23,7 +24,7 @@ export function AnswerDisplay({ result }: AnswerDisplayProps) {
           <CardTitle className="text-base">Answer</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-wrap text-sm">{result.answer}</p>
+          <Markdown className="text-sm">{result.answer}</Markdown>
         </CardContent>
       </Card>
 

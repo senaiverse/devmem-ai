@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PowerSyncProvider } from '@/powersync/provider'
+import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { AppShell } from '@/components/layout/app-shell'
 import { ProjectsPage } from '@/routes/projects'
 import { ProjectDetailPage } from '@/routes/project-detail'
@@ -22,14 +23,17 @@ export function App() {
         <TooltipProvider delay={300}>
           <BrowserRouter>
             <AppShell>
-              <Routes>
-                <Route path="/" element={<Navigate to="/projects" replace />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                <Route path="/projects/:id/ask" element={<AskPage />} />
-                <Route path="/projects/:id/import" element={<ImportPage />} />
-                <Route path="/projects/:id/knowledge" element={<KnowledgePage />} />
-              </Routes>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/projects" replace />} />
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                  <Route path="/projects/:id/ask" element={<AskPage />} />
+                  <Route path="/projects/:id/import" element={<ImportPage />} />
+                  <Route path="/projects/:id/knowledge" element={<KnowledgePage />} />
+                  <Route path="*" element={<Navigate to="/projects" replace />} />
+                </Routes>
+              </ErrorBoundary>
             </AppShell>
             <Toaster />
           </BrowserRouter>

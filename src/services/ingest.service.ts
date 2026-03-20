@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 import type { ProcessIngestJobResponse } from '@/types/api'
 
 /**
@@ -15,6 +16,7 @@ export async function uploadFileToQueue(
   file: File,
   category: string
 ): Promise<string> {
+  assertOnline()
   const jobId = crypto.randomUUID()
   const storagePath = `${projectId}/${jobId}-${file.name}`
 
@@ -51,6 +53,7 @@ export async function retryIngestJob(
   db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
   jobId: string
 ): Promise<void> {
+  assertOnline()
   const now = new Date().toISOString()
   await db.execute(
     `UPDATE ingest_jobs SET status = 'pending', error = NULL, progress = 0, updated_at = ? WHERE id = ?`,
@@ -86,6 +89,7 @@ export async function cancelIngestJob(
  * For pending/failed jobs, use cancelIngestJob() which deletes the row.
  */
 export async function requestCancelIngestJob(jobId: string): Promise<void> {
+  assertOnline()
   const { error } = await supabase
     .from('ingest_jobs')
     .update({ status: 'cancelling', updated_at: new Date().toISOString() })
@@ -125,6 +129,7 @@ export async function clearFinishedJobs(
  * Intentionally does not await — status updates arrive via PowerSync sync.
  */
 async function fireProcessJob(jobId: string): Promise<ProcessIngestJobResponse> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/process-ingest-job`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

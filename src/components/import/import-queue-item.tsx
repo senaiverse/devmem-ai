@@ -2,6 +2,7 @@ import { RotateCcw, X, Loader2, CheckCircle2, AlertCircle, Clock, Ban } from 'lu
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import type { IngestJob, IngestJobStatus } from '@/types/ingest-job'
 
 interface ImportQueueItemProps {
@@ -39,42 +40,70 @@ export function ImportQueueItem({
             <JobStatusBadge status={job.status} isStuck={isStuck} />
             {/* Retry: shown for failed or stuck jobs */}
             {(job.status === 'failed' || isStuck) && (
-              <Button variant="ghost" size="icon" onClick={() => onRetry(job.id)} aria-label="Retry">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button variant="ghost" size="icon" onClick={() => onRetry(job.id)} aria-label="Retry" />
+                  }
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </TooltipTrigger>
+                <TooltipContent>Retry processing</TooltipContent>
+              </Tooltip>
             )}
             {/* Cancel pending: deletes row + storage file */}
             {job.status === 'pending' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onCancel(job.id, job.storage_path)}
-                aria-label="Cancel"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onCancel(job.id, job.storage_path)}
+                      aria-label="Cancel"
+                    />
+                  }
+                >
+                  <X className="h-4 w-4" />
+                </TooltipTrigger>
+                <TooltipContent>Cancel and remove file</TooltipContent>
+              </Tooltip>
             )}
             {/* Cancel processing: requests cancellation via Postgres */}
             {job.status === 'processing' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRequestCancel(job.id)}
-                aria-label="Cancel processing"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onRequestCancel(job.id)}
+                      aria-label="Cancel processing"
+                    />
+                  }
+                >
+                  <X className="h-4 w-4" />
+                </TooltipTrigger>
+                <TooltipContent>Stop processing</TooltipContent>
+              </Tooltip>
             )}
             {/* Dismiss finished: removes row from queue */}
             {(job.status === 'completed' || job.status === 'cancelled' || job.status === 'failed') && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDismiss(job.id)}
-                aria-label="Dismiss"
-              >
-                <X className="h-4 w-4 text-muted-foreground" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDismiss(job.id)}
+                      aria-label="Dismiss"
+                    />
+                  }
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>Dismiss from queue</TooltipContent>
+              </Tooltip>
             )}
           </div>
         </div>
@@ -112,9 +141,14 @@ export function ImportQueueItem({
 function JobStatusBadge({ status, isStuck }: { status: IngestJobStatus; isStuck?: boolean }) {
   if (isStuck) {
     return (
-      <Badge variant="outline" className="gap-1 border-amber-500 text-xs text-amber-500">
-        <AlertCircle className="h-3 w-3" /> Stuck?
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger>
+          <Badge variant="outline" className="gap-1 border-amber-500 text-xs text-amber-500">
+            <AlertCircle className="h-3 w-3" /> Stuck?
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>Processing for 3+ minutes with no update — try retrying</TooltipContent>
+      </Tooltip>
     )
   }
 

@@ -27,10 +27,14 @@ export function CopyPromptButton({
 
   async function handleCopy() {
     const prompt = generateRefactorPrompt(projectName, lesson)
-    await navigator.clipboard.writeText(prompt)
-    setCopied(true)
-    toast.success('Prompt copied to clipboard')
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      toast.success('Prompt copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Failed to copy — check browser permissions')
+    }
   }
 
   return (

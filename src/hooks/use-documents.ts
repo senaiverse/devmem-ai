@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { listDocuments, deleteDocument as deleteDocumentApi } from '@/services/document.service'
+import { OfflineError } from '@/lib/network-guard'
 import type { DocumentSummary } from '@/types/document'
 
 /**
@@ -11,26 +12,33 @@ export function useDocuments(projectId: string) {
   const [documents, setDocuments] = useState<DocumentSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const fetchDocuments = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const res = await listDocuments(projectId)
-      setDocuments(res.documents)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load documents'
-      setError(message)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId])
+  const [fetchTrigger, setFetchTrigger] = useState(0)
 
   useEffect(() => {
-    fetchDocuments()
-  }, [fetchDocuments])
+    let cancelled = false
+    setIsLoading(true)
+    setError(null)
 
-  /** Deletes a document and refreshes the list. */
+    listDocuments(projectId)
+      .then((res) => {
+        if (!cancelled) setDocuments(res.documents)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof OfflineError) return
+        setError(err instanceof Error ? err.message : 'Failed to load documents')
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [projectId, fetchTrigger])
+
+  /** Re-fetch documents from the server. */
+  const refetch = useCallback(() => setFetchTrigger((n) => n + 1), [])
+
+  /** Deletes a document and removes it from local state. */
   const deleteDocument = useCallback(
     async (documentId: string) => {
       await deleteDocumentApi(documentId)
@@ -39,5 +47,5 @@ export function useDocuments(projectId: string) {
     []
   )
 
-  return { documents, isLoading, error, refetch: fetchDocuments, deleteDocument }
+  return { documents, isLoading, error, refetch, deleteDocument }
 }

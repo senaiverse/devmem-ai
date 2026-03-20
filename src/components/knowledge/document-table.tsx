@@ -21,8 +21,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, Sparkles, Loader2 } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { generateLessonsFromDoc } from '@/services/generate-lessons.service'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import type { DocumentSummary } from '@/types/document'
 
 interface DocumentTableProps {
@@ -37,6 +39,7 @@ interface DocumentTableProps {
  * lesson generation action, and delete action.
  */
 export function DocumentTable({ documents, isLoading, projectId, onDelete }: DocumentTableProps) {
+  const { isOnline } = useSyncStatus()
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
@@ -46,6 +49,9 @@ export function DocumentTable({ documents, isLoading, projectId, onDelete }: Doc
     setIsDeleting(true)
     try {
       await onDelete(deleteTarget.id)
+      toast.success('Document deleted')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete document')
     } finally {
       setIsDeleting(false)
       setDeleteTarget(null)
@@ -79,8 +85,11 @@ export function DocumentTable({ documents, isLoading, projectId, onDelete }: Doc
 
   if (documents.length === 0) {
     return (
-      <div className="py-8 text-center text-sm text-muted-foreground">
-        No documents ingested yet. Import documents to get started.
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
+        <p className="text-sm font-medium">No documents yet</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Import documents to start building your knowledge base.
+        </p>
       </div>
     )
   }
@@ -90,17 +99,17 @@ export function DocumentTable({ documents, isLoading, projectId, onDelete }: Doc
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
+            <TableHead className="min-w-0">Title</TableHead>
             <TableHead>Category</TableHead>
             <TableHead className="text-right">Chunks</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead className="w-24" />
+            <TableHead className="w-[72px] shrink-0" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {documents.map((doc) => (
             <TableRow key={doc.id}>
-              <TableCell className="font-medium">{doc.title}</TableCell>
+              <TableCell className="max-w-[200px] truncate font-medium">{doc.title}</TableCell>
               <TableCell>
                 {doc.category && (
                   <Badge variant="outline" className="text-xs">{doc.category}</Badge>
@@ -112,28 +121,46 @@ export function DocumentTable({ documents, isLoading, projectId, onDelete }: Doc
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleGenerateLessons(doc)}
-                    disabled={generatingId !== null}
-                    title="Generate lessons from this document"
-                    aria-label={`Generate lessons from ${doc.title}`}
-                  >
-                    {generatingId === doc.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteTarget(doc)}
-                    aria-label={`Delete ${doc.title}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleGenerateLessons(doc)}
+                          disabled={generatingId !== null || !isOnline}
+                          aria-label={`Generate lessons from ${doc.title}`}
+                        />
+                      }
+                    >
+                      {generatingId === doc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isOnline ? 'Generate lessons from document' : 'Requires network connection'}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(doc)}
+                          disabled={!isOnline}
+                          aria-label={`Delete ${doc.title}`}
+                        />
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isOnline ? 'Delete document and extracted lessons' : 'Requires network connection'}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </TableCell>
             </TableRow>

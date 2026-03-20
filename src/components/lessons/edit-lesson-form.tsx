@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import type { Lesson } from '@/types/lesson'
 import { parseTags } from '@/types/lesson'
 import type { LessonWriteFields } from '@/hooks/use-lessons'
@@ -44,6 +45,8 @@ export function EditLessonForm({ lesson, onSave, onCancel }: EditLessonFormProps
         recommendation: recommendation.trim() || null,
         tags,
       })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save lesson')
     } finally {
       setIsSubmitting(false)
     }

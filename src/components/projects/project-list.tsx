@@ -18,7 +18,7 @@ export function ProjectList({ projects, isLoading, onCreateProject }: ProjectLis
   }
 
   return (
-    <div>
+    <div className="animate-page-enter">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
         <ProjectFormDialog onSubmit={handleCreate} />

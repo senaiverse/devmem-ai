@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Calendar, Clock } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ErrorAlert } from '@/components/shared/error-alert'
 import { EmptyState } from '@/components/shared/empty-state'
 import { useTimeline } from '@/hooks/use-timeline'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import { FocusAreas } from '@/components/timeline/focus-areas'
 
 interface TimelineTabContentProps {
@@ -15,17 +17,18 @@ interface TimelineTabContentProps {
 /** Period preset for the timeline selector. */
 interface PeriodPreset {
   label: string
+  tooltip: string
   days: number
 }
 
 const PERIOD_PRESETS: PeriodPreset[] = [
-  { label: '24h', days: 1 },
-  { label: '7d', days: 7 },
-  { label: '14d', days: 14 },
-  { label: '30d', days: 30 },
-  { label: '90d', days: 90 },
-  { label: '6mo', days: 180 },
-  { label: '1yr', days: 365 },
+  { label: '24h', tooltip: 'Last 24 hours', days: 1 },
+  { label: '7d', tooltip: 'Last 7 days', days: 7 },
+  { label: '14d', tooltip: 'Last 14 days', days: 14 },
+  { label: '30d', tooltip: 'Last 30 days', days: 30 },
+  { label: '90d', tooltip: 'Last 90 days', days: 90 },
+  { label: '6mo', tooltip: 'Last 6 months', days: 180 },
+  { label: '1yr', tooltip: 'Last 1 year', days: 365 },
 ]
 
 /**
@@ -46,6 +49,7 @@ function daysAgoISO(days: number): string {
  * and the Gemini-generated improvement summary with focus areas.
  */
 export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
+  const { isOnline } = useSyncStatus()
   const { fetchSummary, result, isLoading, error } = useTimeline(projectId)
   const [activePeriod, setActivePeriod] = useState<string | null>(null)
 
@@ -62,20 +66,28 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
         <h2 className="text-lg font-semibold">Timeline</h2>
         <div className="flex flex-wrap gap-1.5">
           {PERIOD_PRESETS.map((preset) => (
-            <Button
-              key={preset.label}
-              variant={activePeriod === preset.label ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handlePeriodClick(preset)}
-              disabled={isLoading}
-            >
-              {isLoading && activePeriod === preset.label ? (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              ) : (
-                <Calendar className="mr-1 h-3 w-3" />
-              )}
-              {preset.label}
-            </Button>
+            <Tooltip key={preset.label}>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={activePeriod === preset.label ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handlePeriodClick(preset)}
+                    disabled={isLoading || !isOnline}
+                  />
+                }
+              >
+                {isLoading && activePeriod === preset.label ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Calendar className="mr-1 h-3 w-3" />
+                )}
+                {preset.label}
+              </TooltipTrigger>
+              <TooltipContent>
+                {isOnline ? preset.tooltip : 'Requires network connection'}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
       </div>
@@ -96,9 +108,14 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Summary</CardTitle>
                 {result.cached && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
-                    Cached
-                  </Badge>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        Cached
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Loaded from cache — select a period to regenerate</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </CardHeader>

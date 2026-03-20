@@ -1,4 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 import type { SearchRequest, SearchResponse, SearchMode } from '@/types/api'
 
 /**
@@ -11,6 +12,7 @@ export async function searchProject(
   query: string,
   mode: SearchMode = 'question'
 ): Promise<SearchResponse> {
+  assertOnline()
   const body: SearchRequest = { project_id: projectId, query, mode }
 
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/search`, {

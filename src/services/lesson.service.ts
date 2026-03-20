@@ -1,4 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 import type { CreateLessonRequest, EmbedLessonResponse } from '@/types/api'
 import type { Lesson } from '@/types/lesson'
 
@@ -10,6 +11,7 @@ import type { Lesson } from '@/types/lesson'
 export async function createLessonFromChange(
   request: CreateLessonRequest
 ): Promise<Lesson> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/create-lesson-from-change`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -29,6 +31,7 @@ export async function createLessonFromChange(
  * Called after manual lesson creation or edit to ensure the lesson is searchable.
  */
 export async function embedLesson(lessonId: string): Promise<EmbedLessonResponse> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/embed-lesson`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

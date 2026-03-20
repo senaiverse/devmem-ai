@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { AntipatternList } from './antipattern-list'
 import { LessonDetailSheet } from '@/components/lessons/lesson-detail-sheet'
 import { useAntipatterns } from '@/hooks/use-antipatterns'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import { classifyLessons } from '@/services/classify.service'
 import type { Lesson } from '@/types/lesson'
 import type { LessonWriteFields } from '@/hooks/use-lessons'
@@ -25,6 +27,7 @@ export function AntiPatternsTabContent({
   onUpdateLesson,
   onDeleteLesson,
 }: AntiPatternsTabContentProps) {
+  const { isOnline } = useSyncStatus()
   const { grouped, isLoading, count } = useAntipatterns(projectId)
   const [isClassifying, setIsClassifying] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
@@ -53,19 +56,28 @@ export function AntiPatternsTabContent({
             Lessons flagged with potential code smells or tech debt. Click &quot;Classify All&quot; to scan unclassified lessons.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClassifyAll}
-          disabled={isClassifying}
-        >
-          {isClassifying ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-1 h-4 w-4" />
-          )}
-          Classify All
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClassifyAll}
+                disabled={isClassifying || !isOnline}
+              />
+            }
+          >
+            {isClassifying ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1 h-4 w-4" />
+            )}
+            Classify All
+          </TooltipTrigger>
+          <TooltipContent>
+            {isOnline ? 'Scan unclassified lessons for antipatterns' : 'Requires network connection'}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <AntipatternList

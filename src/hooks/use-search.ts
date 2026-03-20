@@ -30,10 +30,10 @@ export function useSearch(projectId: string) {
     [projectId]
   )
 
-  function reset() {
+  const reset = useCallback(() => {
     setResult(null)
     setError(null)
-  }
+  }, [])
 
   return { search, result, isSearching, error, reset }
 }

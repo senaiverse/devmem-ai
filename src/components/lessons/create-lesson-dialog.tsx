@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Plus } from 'lucide-react'
@@ -62,6 +63,8 @@ export function CreateLessonDialog({ onCreate }: CreateLessonDialogProps) {
 
       resetForm()
       setOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create lesson')
     } finally {
       setIsSubmitting(false)
     }

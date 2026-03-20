@@ -2,6 +2,7 @@ import { BookOpen, HelpCircle, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProjectStats } from '@/hooks/use-project-stats'
+import { useCountUp } from '@/hooks/use-count-up'
 
 interface StatsCardsProps {
   projectId: string
@@ -41,6 +42,8 @@ function StatCard({
   label: string
   value: number
 }) {
+  const animatedValue = useCountUp(value)
+
   return (
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
@@ -48,7 +51,7 @@ function StatCard({
           <Icon className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-2xl font-bold">{animatedValue}</p>
           <p className="text-xs text-muted-foreground">{label}</p>
         </div>
       </CardContent>

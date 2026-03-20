@@ -1,4 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 
 /** Response from the generate-lessons-from-doc Edge Function. */
 export interface GenerateLessonsResponse {
@@ -14,6 +15,7 @@ export async function generateLessonsFromDoc(
   documentId: string,
   projectId: string,
 ): Promise<GenerateLessonsResponse> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/generate-lessons-from-doc`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

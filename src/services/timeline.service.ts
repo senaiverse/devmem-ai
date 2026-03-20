@@ -1,4 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 
 /** Focus areas analysis — strong vs weak themes based on tag frequency. */
 export interface FocusAreas {
@@ -25,6 +26,7 @@ export async function summarizePeriod(
   from: string,
   to: string
 ): Promise<SummarizePeriodResponse> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/summarize-period`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

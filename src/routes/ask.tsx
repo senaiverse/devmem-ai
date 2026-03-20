@@ -9,7 +9,9 @@ import { AskForm } from '@/components/questions/ask-form'
 import { AnswerDisplay } from '@/components/questions/answer-display'
 import { QuestionHistory } from '@/components/questions/question-history'
 import { ErrorAlert } from '@/components/shared/error-alert'
+import { OfflineBanner } from '@/components/projects/offline-banner'
 import { useSearch } from '@/hooks/use-search'
+import { useSyncStatus } from '@/hooks/use-sync-status'
 import { useQuestions } from '@/hooks/use-questions'
 import type { Project } from '@/types/project'
 import type { SearchMode } from '@/types/api'
@@ -26,6 +28,7 @@ export function AskPage() {
   )
   const project = projectRows[0] ?? null
 
+  const { isOnline } = useSyncStatus()
   const [mode, setMode] = useState<SearchMode>('question')
   const [query, setQuery] = useState('')
   const { search, result, isSearching, error, reset } = useSearch(id!)
@@ -44,7 +47,7 @@ export function AskPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="animate-page-enter mx-auto max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Ask a Question</h1>
@@ -57,7 +60,12 @@ export function AskPage() {
         </Link>
       </div>
 
-      <Tabs defaultValue="question" onValueChange={(v) => setMode(v as SearchMode)}>
+      <OfflineBanner
+        isOnline={isOnline}
+        message="You're offline. Search and AI features require a network connection."
+      />
+
+      <Tabs defaultValue="question" onValueChange={(v) => { setMode(v as SearchMode); reset() }}>
         <TabsList>
           <TabsTrigger value="question">Question</TabsTrigger>
           <TabsTrigger value="error">Error</TabsTrigger>

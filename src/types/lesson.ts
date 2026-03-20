@@ -16,10 +16,10 @@ export interface Lesson {
   solution: string | null;
   recommendation: string | null;
   tags: string; // JSON string of text[] — parse with JSON.parse()
-  source_type: string | null;
+  source_type: 'manual' | 'change' | 'document' | 'note' | null;
   source_ref: string | null;
   created_at: string;
-  risk_level: string;
+  risk_level: RiskLevel;
   antipattern_name: string | null;
   antipattern_reason: string | null;
 }

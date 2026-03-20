@@ -1,5 +1,4 @@
 import { useQuery, usePowerSync } from '@powersync/react'
-import { v4 as uuidv4 } from 'uuid'
 import type { Project } from '@/types/project'
 
 /**
@@ -13,7 +12,7 @@ export function useProjects() {
   )
 
   async function createProject(name: string, slug: string, description?: string) {
-    const id = uuidv4()
+    const id = crypto.randomUUID()
     await db.execute(
       'INSERT INTO projects (id, name, slug, description, created_at) VALUES (?, ?, ?, ?, ?)',
       [id, name, slug, description ?? null, new Date().toISOString()]

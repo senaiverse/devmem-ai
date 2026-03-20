@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import type { Lesson } from '@/types/lesson'
+import type { Lesson, RiskLevel } from '@/types/lesson'
 import { parseTags } from '@/types/lesson'
 
 interface LessonCardProps {
@@ -10,8 +10,8 @@ interface LessonCardProps {
 }
 
 /** Whether risk level warrants a visible badge (skip none/low). */
-function isNotableRisk(level: string | undefined): boolean {
-  return !!level && level !== 'none' && level !== 'low'
+function isNotableRisk(level: RiskLevel): boolean {
+  return level !== 'none' && level !== 'low'
 }
 
 /**
@@ -25,8 +25,11 @@ export function LessonCard({ lesson, onClick }: LessonCardProps) {
 
   return (
     <Card
-      className="cursor-pointer transition-colors hover:bg-accent/50"
+      role="button"
+      tabIndex={0}
+      className="cursor-pointer transition-all duration-200 hover:bg-accent/50 hover:shadow-md hover:-translate-y-0.5"
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
     >
       <CardHeader className="pb-2">
         <CardTitle className="text-base">{lesson.title}</CardTitle>

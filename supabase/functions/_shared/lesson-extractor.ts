@@ -52,17 +52,20 @@ Return ONLY the JSON array, no markdown fencing.`;
       for (const lesson of lessons) {
         const { data: lessonData, error: lessonError } = await supabase
           .from('lessons')
-          .insert({
-            project_id: projectId,
-            title: lesson.title,
-            problem: lesson.problem,
-            root_cause: lesson.root_cause,
-            solution: lesson.solution,
-            recommendation: lesson.recommendation,
-            tags: lesson.tags || [],
-            source_type: 'document',
-            source_ref: documentId,
-          })
+          .upsert(
+            {
+              project_id: projectId,
+              title: lesson.title,
+              problem: lesson.problem,
+              root_cause: lesson.root_cause,
+              solution: lesson.solution,
+              recommendation: lesson.recommendation,
+              tags: lesson.tags || [],
+              source_type: 'document',
+              source_ref: documentId,
+            },
+            { onConflict: 'project_id,title', ignoreDuplicates: false },
+          )
           .select('id')
           .single();
 
@@ -76,10 +79,10 @@ Return ONLY the JSON array, no markdown fencing.`;
           .join(' ');
         const lessonEmbedding = await generateEmbedding(lessonText);
 
-        await supabase.from('lesson_embeddings').insert({
-          lesson_id: lessonData.id,
-          embedding: JSON.stringify(lessonEmbedding),
-        });
+        await supabase.from('lesson_embeddings').upsert(
+          { lesson_id: lessonData.id, embedding: JSON.stringify(lessonEmbedding) },
+          { onConflict: 'lesson_id' },
+        );
 
         // Classify for antipatterns (non-fatal)
         const classification = await classifyLesson({

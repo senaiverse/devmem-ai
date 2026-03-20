@@ -46,20 +46,15 @@ Deno.serve(async (req) => {
     // 3. Generate the embedding vector
     const embedding = await generateEmbedding(text);
 
-    // 4. Upsert into lesson_embeddings (delete + insert to avoid conflicts)
-    await supabase
+    // 4. Atomic upsert into lesson_embeddings (uses UNIQUE constraint on lesson_id)
+    const { error: upsertError } = await supabase
       .from('lesson_embeddings')
-      .delete()
-      .eq('lesson_id', lesson_id);
+      .upsert(
+        { lesson_id, embedding: JSON.stringify(embedding) },
+        { onConflict: 'lesson_id' },
+      );
 
-    const { error: insertError } = await supabase
-      .from('lesson_embeddings')
-      .insert({
-        lesson_id,
-        embedding: JSON.stringify(embedding),
-      });
-
-    if (insertError) throw insertError;
+    if (upsertError) throw upsertError;
 
     // 5. Re-classify for antipatterns (content may have changed)
     const tags = Array.isArray(lesson.tags) ? lesson.tags : [];

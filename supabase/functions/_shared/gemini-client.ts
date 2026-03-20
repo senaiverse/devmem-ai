@@ -22,5 +22,5 @@ export async function promptGemini(
   model = 'gemini-2.5-flash'
 ): Promise<string> {
   const interaction = await client.interactions.create({ model, input: prompt });
-  return interaction.outputs[interaction.outputs.length - 1].text || '';
+  return interaction.outputs?.at(-1)?.text ?? '';
 }

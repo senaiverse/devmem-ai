@@ -42,9 +42,9 @@ export function MobileSidebar() {
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
         <SheetHeader className="border-b px-4">
-          <SheetTitle>Dev Memory Ledger</SheetTitle>
+          <SheetTitle>DevMem AI</SheetTitle>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-3.5rem)]">
+        <ScrollArea className="h-[calc(100dvh-3.5rem)]">
           <div className="p-4">
             <Link
               to="/projects"
@@ -75,12 +75,12 @@ export function MobileSidebar() {
                       : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
-                  {project.name}
+                  <span className="truncate" title={project.name}>{project.name}</span>
                 </Link>
               ))}
               {projects.length === 0 && (
                 <p className="px-3 py-2 text-sm text-muted-foreground">
-                  No projects yet
+                  No projects yet. Create one from the Projects page.
                 </p>
               )}
             </nav>

@@ -1,4 +1,5 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
+import { assertOnline } from '@/lib/network-guard'
 
 /** Response from the classify-lessons Edge Function. */
 export interface ClassifyLessonsResponse {
@@ -13,6 +14,7 @@ export interface ClassifyLessonsResponse {
 export async function classifyLessons(
   projectId: string
 ): Promise<ClassifyLessonsResponse> {
+  assertOnline()
   const res = await fetch(`${EDGE_FUNCTIONS_URL}/classify-lessons`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
