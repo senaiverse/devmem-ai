@@ -156,8 +156,8 @@ recalls them in your IDE, and tracks project health over time.
 
 </details>
 
-> [!NOTE]
-> These are text representations of the actual UI. Replace with screenshots once available — drop images into `docs/screenshots/` and reference them here.
+> [!TIP]
+> Expand each section above to see the UI mockup. Want to add real screenshots? Drop them into `docs/screenshots/` and swap the code blocks for image tags.
 
 ---
 
