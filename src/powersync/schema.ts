@@ -24,6 +24,9 @@ const lessons = new Table(
     source_type: column.text,
     source_ref: column.text,
     created_at: column.text,
+    risk_level: column.text,
+    antipattern_name: column.text,
+    antipattern_reason: column.text,
   },
   { indexes: { project: ['project_id'] } }
 );

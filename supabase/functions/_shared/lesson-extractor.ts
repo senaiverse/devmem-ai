@@ -1,6 +1,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { GoogleGenAI } from 'https://esm.sh/@google/genai@1.33.0';
 import { generateEmbedding } from './embeddings.ts';
+import { createGeminiClient, promptGemini } from './gemini-client.ts';
+import { classifyLesson, persistClassification } from './antipattern-classifier.ts';
 
 /**
  * Extracts structured lessons from document text via Gemini,
@@ -16,13 +17,15 @@ export async function extractAndInsertLessons(
   category: string,
   rawText: string
 ): Promise<number> {
-  const geminiKey = Deno.env.get('GEMINI_API_KEY');
-  if (!geminiKey || rawText.length <= 100) return 0;
+  if (rawText.length <= 100) return 0;
+
+  // Guard: skip if no Gemini key configured
+  try { createGeminiClient(); } catch { return 0; }
 
   let lessonsCreated = 0;
 
   try {
-    const client = new GoogleGenAI({ apiKey: geminiKey });
+    const client = createGeminiClient();
     const prompt = `You are a software engineering knowledge extractor. Analyze this document and extract 1-3 structured lessons that capture key decisions, patterns, or solutions.
 
 Document title: ${title}
@@ -40,12 +43,7 @@ Return a JSON array of lessons. Each lesson must have these fields:
 
 Return ONLY the JSON array, no markdown fencing.`;
 
-    const interaction = await client.interactions.create({
-      model: 'gemini-2.5-flash',
-      input: prompt,
-    });
-
-    const responseText = interaction.outputs[interaction.outputs.length - 1].text || '';
+    const responseText = await promptGemini(client, prompt);
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);
 
     if (jsonMatch) {
@@ -82,6 +80,17 @@ Return ONLY the JSON array, no markdown fencing.`;
           lesson_id: lessonData.id,
           embedding: JSON.stringify(lessonEmbedding),
         });
+
+        // Classify for antipatterns (non-fatal)
+        const classification = await classifyLesson({
+          title: lesson.title,
+          problem: lesson.problem,
+          root_cause: lesson.root_cause,
+          solution: lesson.solution,
+          recommendation: lesson.recommendation,
+          tags: lesson.tags || [],
+        });
+        await persistClassification(supabase, lessonData.id, classification);
 
         lessonsCreated++;
       }

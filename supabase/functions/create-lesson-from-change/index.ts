@@ -1,7 +1,8 @@
 import { handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts';
 import { createAdminClient } from '../_shared/supabase-client.ts';
 import { generateEmbedding } from '../_shared/embeddings.ts';
-import { GoogleGenAI } from 'https://esm.sh/@google/genai@1.33.0';
+import { createGeminiClient, promptGemini } from '../_shared/gemini-client.ts';
+import { classifyLesson, persistClassification } from '../_shared/antipattern-classifier.ts';
 
 Deno.serve(async (req) => {
   const corsResp = handleCors(req);
@@ -16,11 +17,6 @@ Deno.serve(async (req) => {
 
     if (!diff_summary && !error_log && !notes) {
       return errorResponse('At least one of diff_summary, error_log, or notes is required');
-    }
-
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiKey) {
-      return errorResponse('GEMINI_API_KEY not configured', 500);
     }
 
     // Build the prompt
@@ -43,13 +39,8 @@ Return a JSON object with these fields:
 
 Return ONLY the JSON object, no markdown fencing.`;
 
-    const client = new GoogleGenAI({ apiKey: geminiKey });
-    const interaction = await client.interactions.create({
-      model: 'gemini-2.5-flash',
-      input: prompt,
-    });
-
-    const responseText = interaction.outputs[interaction.outputs.length - 1].text || '';
+    const client = createGeminiClient();
+    const responseText = await promptGemini(client, prompt);
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return errorResponse('Failed to parse structured lesson from LLM response', 500);
@@ -88,6 +79,17 @@ Return ONLY the JSON object, no markdown fencing.`;
       lesson_id: lessonData.id,
       embedding: JSON.stringify(embedding),
     });
+
+    // Classify for antipatterns (non-fatal)
+    const classification = await classifyLesson({
+      title: lesson.title,
+      problem: lesson.problem,
+      root_cause: lesson.root_cause,
+      solution: lesson.solution,
+      recommendation: lesson.recommendation,
+      tags: lesson.tags || [],
+    });
+    await persistClassification(supabase, lessonData.id, classification);
 
     return jsonResponse({ lesson: lessonData });
   } catch (error) {

@@ -22,10 +22,14 @@ export interface CreateLessonRequest {
   notes?: string;
 }
 
+/** Search mode: standard question or error/stack-trace analysis. */
+export type SearchMode = 'question' | 'error';
+
 /** Request body for POST /api/search */
 export interface SearchRequest {
   project_id: string;
   query: string;
+  mode?: SearchMode;
 }
 
 /** Response from POST /api/search */
@@ -40,6 +44,14 @@ export interface SearchResponse {
     title?: string;
   }>;
   question_id: string;
+  /** Present in error mode — lessons similar to the pasted error/stack trace. */
+  similar_lessons?: Array<{
+    lesson_id: string;
+    title: string;
+    reason: string;
+  }>;
+  /** Present in error mode — suggested resolution steps. */
+  suggested_steps?: string[];
 }
 
 /** Request body for POST /api/process-ingest-job */

@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Pencil, Trash2 } from 'lucide-react'
 import { EditLessonForm } from './edit-lesson-form'
+import { CopyPromptButton } from './copy-prompt-button'
 import type { Lesson } from '@/types/lesson'
 import { parseTags } from '@/types/lesson'
 import type { LessonWriteFields } from '@/hooks/use-lessons'
@@ -31,6 +32,7 @@ interface LessonDetailSheetProps {
   onOpenChange: (open: boolean) => void
   onUpdate?: (lessonId: string, fields: Partial<LessonWriteFields>) => Promise<void>
   onDelete?: (lessonId: string) => Promise<void>
+  projectName?: string
 }
 
 /**
@@ -42,6 +44,7 @@ export function LessonDetailSheet({
   onOpenChange,
   onUpdate,
   onDelete,
+  projectName,
 }: LessonDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false)
 
@@ -73,8 +76,11 @@ export function LessonDetailSheet({
         <SheetHeader>
           <div className="flex items-start justify-between gap-2">
             <SheetTitle className="flex-1">{lesson.title}</SheetTitle>
-            {(onUpdate || onDelete) && !isEditing && (
+            {!isEditing && (
               <div className="flex gap-1">
+                {projectName && (
+                  <CopyPromptButton lesson={lesson} projectName={projectName} />
+                )}
                 {onUpdate && (
                   <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} aria-label="Edit">
                     <Pencil className="h-4 w-4" />
@@ -103,6 +109,7 @@ export function LessonDetailSheet({
                 )}
               </div>
             )}
+
           </div>
         </SheetHeader>
 

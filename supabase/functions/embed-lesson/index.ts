@@ -10,6 +10,7 @@
 import { handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts';
 import { createAdminClient } from '../_shared/supabase-client.ts';
 import { generateEmbedding } from '../_shared/embeddings.ts';
+import { classifyLesson, persistClassification } from '../_shared/antipattern-classifier.ts';
 
 Deno.serve(async (req) => {
   const corsResp = handleCors(req);
@@ -24,10 +25,10 @@ Deno.serve(async (req) => {
 
     const supabase = createAdminClient();
 
-    // 1. Fetch the lesson
+    // 1. Fetch the lesson (include all fields for re-classification)
     const { data: lesson, error: fetchError } = await supabase
       .from('lessons')
-      .select('id, title, problem, solution, recommendation')
+      .select('id, title, problem, root_cause, solution, recommendation, tags')
       .eq('id', lesson_id)
       .maybeSingle();
 
@@ -59,6 +60,18 @@ Deno.serve(async (req) => {
       });
 
     if (insertError) throw insertError;
+
+    // 5. Re-classify for antipatterns (content may have changed)
+    const tags = Array.isArray(lesson.tags) ? lesson.tags : [];
+    const classification = await classifyLesson({
+      title: lesson.title,
+      problem: lesson.problem,
+      root_cause: lesson.root_cause,
+      solution: lesson.solution,
+      recommendation: lesson.recommendation,
+      tags,
+    });
+    await persistClassification(supabase, lesson_id, classification);
 
     return jsonResponse({ lesson_id, success: true });
   } catch (error) {

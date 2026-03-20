@@ -1,3 +1,11 @@
+/** Valid risk level values for antipattern classification. */
+export type RiskLevel = 'none' | 'low' | 'medium' | 'high';
+
+/** Type guard for risk levels. */
+export function isRiskLevel(value: string): value is RiskLevel {
+  return ['none', 'low', 'medium', 'high'].includes(value);
+}
+
 /** Lesson entity as stored in PowerSync local DB. */
 export interface Lesson {
   id: string;
@@ -11,6 +19,9 @@ export interface Lesson {
   source_type: string | null;
   source_ref: string | null;
   created_at: string;
+  risk_level: string;
+  antipattern_name: string | null;
+  antipattern_reason: string | null;
 }
 
 /** Parsed tags helper. */

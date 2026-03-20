@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ErrorResultDisplay } from './error-result-display'
 import type { SearchResponse } from '@/types/api'
 
 interface AnswerDisplayProps {
@@ -7,9 +8,14 @@ interface AnswerDisplayProps {
 }
 
 /**
- * Displays the RAG answer and source references.
+ * Displays search results. Delegates to ErrorResultDisplay when
+ * the response contains error-mode fields (similar_lessons).
  */
 export function AnswerDisplay({ result }: AnswerDisplayProps) {
+  if (result.similar_lessons && result.similar_lessons.length > 0) {
+    return <ErrorResultDisplay result={result} />
+  }
+
   return (
     <div className="space-y-4">
       <Card>

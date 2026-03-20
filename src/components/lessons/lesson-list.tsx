@@ -14,6 +14,7 @@ interface LessonListProps {
   onSearchChange: (value: string) => void
   filterTag: string
   onFilterTagChange: (tag: string) => void
+  projectName?: string
   onUpdateLesson?: (lessonId: string, fields: Partial<LessonWriteFields>) => Promise<void>
   onDeleteLesson?: (lessonId: string) => Promise<void>
 }
@@ -30,6 +31,7 @@ export function LessonList({
   onSearchChange,
   filterTag,
   onFilterTagChange,
+  projectName,
   onUpdateLesson,
   onDeleteLesson,
 }: LessonListProps) {
@@ -77,6 +79,7 @@ export function LessonList({
         }}
         onUpdate={onUpdateLesson}
         onDelete={onDeleteLesson}
+        projectName={projectName}
       />
     </div>
   )
