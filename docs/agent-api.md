@@ -6,7 +6,7 @@ Dev Memory Ledger is a project knowledge base that stores lessons learned,
 architectural decisions, debugging knowledge, and antipattern analysis. It exposes
 a set of tools through two interfaces:
 
-1. **MCP Server** (primary) — five tools via Model Context Protocol for Claude Code,
+1. **MCP Server** (primary) — seven tools via Model Context Protocol for Claude Code,
    Cursor, Windsurf, and any MCP-compatible agent
 2. **HTTP API** (fallback) — four Supabase Edge Function endpoints for direct REST access
 
@@ -17,30 +17,34 @@ Gemini AI for generation and classification.
 
 ## MCP Server
 
-The MCP server (`mcp/server.ts`) is a thin pass-through that forwards tool calls
-to Supabase Edge Functions. It uses stdio transport, which is universal across all
-MCP clients.
+The MCP server (`mcp/server.ts`) is a workspace-agnostic wrapper that forwards
+tool calls to Supabase Edge Functions. It uses stdio transport, which is universal
+across all MCP clients.
 
 ### Tools
 
-| Tool | Purpose |
-|------|---------|
-| `devmem_list_projects` | Discover available projects and their slugs |
-| `devmem_search` | Search the knowledge base (question / error / antipattern modes) |
-| `devmem_save_lesson` | Save a structured lesson from a code change or bug fix |
-| `devmem_save_note` | Save a personal note, guideline, standard, or decision |
-| `devmem_summarize` | Summarize lessons and improvements over a time period |
+| Tool | Purpose | Read-only | Idempotent |
+|------|---------|-----------|------------|
+| `devmem_list_projects` | Discover available projects and their slugs | Yes | Yes |
+| `devmem_search` | Search the knowledge base (question / error / antipattern modes) | Yes | Yes |
+| `devmem_save_lesson` | Save a structured lesson from a code change or bug fix | No | No |
+| `devmem_save_note` | Save a personal note, guideline, standard, or decision | No | No |
+| `devmem_summarize` | Summarize lessons and improvements over a time period | Yes | Yes |
+| `devmem_attach` | Attach a workspace to a project (writes `.devmemory.json`) | No | Yes |
+| `devmem_create_project` | Create a new project in the ledger | No | No |
 
-### Setup
+### Global Setup
 
-Create `.mcp.json` at the project root with your Supabase credentials:
+Register the MCP server once in your agent's global settings so it's available
+from any workspace.
 
+**Claude Code** (`~/.claude.json` or user settings):
 ```json
 {
   "mcpServers": {
     "dev-memory-ledger": {
       "command": "cmd",
-      "args": ["/c", "npx", "tsx", "mcp/server.ts"],
+      "args": ["/c", "npx", "tsx", "D:/PROJECTS/HACKATHON/mcp/server.ts"],
       "env": {
         "SUPABASE_URL": "https://your-project.supabase.co",
         "SUPABASE_ANON_KEY": "your-anon-key"
@@ -50,17 +54,55 @@ Create `.mcp.json` at the project root with your Supabase credentials:
 }
 ```
 
-> **Note:** On macOS/Linux, use `"command": "npx", "args": ["tsx", "mcp/server.ts"]`
+> **Note:** On macOS/Linux, use `"command": "npx", "args": ["tsx", "/path/to/mcp/server.ts"]`
 > instead of the `cmd /c` wrapper.
 
-Restart your agent to discover the server. The `.mcp.json` file is gitignored
-since it contains credentials.
+**Per-repo** (`.mcp.json` at project root — gitignored):
+```json
+{
+  "mcpServers": {
+    "dev-memory-ledger": {
+      "command": "cmd",
+      "args": ["/c", "npx", "tsx", "D:/PROJECTS/HACKATHON/mcp/server.ts"],
+      "env": {
+        "SUPABASE_URL": "https://your-project.supabase.co",
+        "SUPABASE_ANON_KEY": "your-anon-key",
+        "DEVMEM_PROJECT_SLUG": "my-project"
+      }
+    }
+  }
+}
+```
+
+Adding `DEVMEM_PROJECT_SLUG` to the env block auto-resolves the project slug
+without needing `.devmemory.json` or `devmem_attach`.
+
+### Workspace Attachment
+
+The server auto-resolves which project to use via a layered resolution chain:
+
+| Priority | Source | Persistence | How it's set |
+|----------|--------|-------------|--------------|
+| 1 | `project_slug` in tool args | Per-call | Manual override |
+| 2 | In-memory cache | Session only | Cached from prior calls or `devmem_attach` |
+| 3 | `DEVMEM_PROJECT_SLUG` env var | Permanent (per-repo) | Added to `.mcp.json` env block |
+| 4 | `.devmemory.json` in workspace root | Permanent (committed) | Written by `devmem_attach` |
+
+If nothing resolves, the server lists available projects and prompts the agent
+to call `devmem_attach` or pass `project_slug` explicitly.
+
+**`.devmemory.json` format** (safe to commit — no secrets):
+```json
+{
+  "devmem_project_slug": "my-project"
+}
+```
 
 ### Multi-Agent Compatibility
 
 | Agent | Config Location |
 |-------|----------------|
-| Claude Code | `.mcp.json` at project root (auto-discovered) |
+| Claude Code | `~/.claude.json` (global) or `.mcp.json` (per-repo) |
 | Cursor | `.cursor/mcp.json` (same format) |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` (same format) |
 
@@ -205,13 +247,15 @@ Only `content` is required. `title` and `category` are optional.
 ### POST `/functions/v1/summarize-period`
 
 Generate a thematic summary of lessons recorded within a time window.
+Results are cached for 24 hours (use `force_refresh: true` to bypass).
 
 **Request:**
 ```json
 {
   "project_slug": "my-project",
   "from": "2026-01-01T00:00:00Z",
-  "to": "2026-03-31T23:59:59Z"
+  "to": "2026-03-31T23:59:59Z",
+  "force_refresh": false
 }
 ```
 
@@ -224,6 +268,12 @@ Generate a thematic summary of lessons recorded within a time window.
     "Performance": ["Optimized database queries reducing p95 by 40%"]
   },
   "follow_up": "Consider adding load testing for the new API endpoints.",
+  "focusAreas": {
+    "strong": ["Testing", "Architecture"],
+    "weak": ["Security"],
+    "counts": { "Testing": 5, "Security": 1, "Architecture": 4 }
+  },
+  "cached": false,
   "project": { "id": "uuid", "slug": "string", "name": "string" }
 }
 ```
@@ -254,16 +304,23 @@ deno run --allow-net --allow-env --allow-read demo/submit-lesson-from-change.ts 
 ## Architecture
 
 ```
+Any Repo (e.g., GEZANA-APP/)
+  │
+  │  .devmemory.json  <- { "devmem_project_slug": "my-project" }
+  │
+  ▼
 Agent (Claude Code / Cursor / Windsurf)
   │  MCP stdio (JSON-RPC)
   ▼
 MCP Server (mcp/server.ts)
+  │  resolveProjectSlug():
+  │    1. tool args → 2. cache → 3. env var → 4. .devmemory.json → 5. error + list
   │  HTTP POST + apikey + Bearer
   ▼
 Supabase Edge Functions
   │  Gemini AI + pgvector + antipattern classification
   ▼
-Supabase Postgres (lessons, questions, document_chunks)
+Supabase Postgres (lessons, questions, document_chunks, period_summaries)
 ```
 
 | Component | Detail |
@@ -273,4 +330,6 @@ Supabase Postgres (lessons, questions, document_chunks)
 | Antipattern classification | Automatic on lesson/note creation (non-fatal) |
 | Tag boosting | Error mode: +0.15 for bug/incident/error/crash tags |
 | Risk weights | Antipattern mode: high +0.3, medium +0.2, low +0.1 |
+| Timeline caching | `period_summaries` table, 24h TTL, `force_refresh` bypass |
+| Focus areas | Tag-to-theme mapping (7 themes), strong/weak classification |
 | Hallucination guard | All lesson IDs validated against the actual fetched set |
