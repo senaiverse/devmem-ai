@@ -24,24 +24,140 @@ recalls them in your IDE, and tracks project health over time.
 
 ## What It Looks Like
 
-### Lessons & Antipatterns
+<details open>
+<summary><strong>Lessons & Antipatterns</strong> — Browse lessons, filter by tag, see risk badges</summary>
 
-Browse all captured lessons in a tabbed project view. Each lesson shows its title, problem, solution, and tags. Lessons flagged as risky patterns display severity badges (`high` / `medium` / `low`) and can be expanded for AI-generated refactor prompts.
+```
+┌──────────────────────────────────────────────────────────────┐
+│  My Project                        [Synced ●] [Offline] [Ask]│
+├─────────────────┬──────────────────┬─────────────────────────┤
+│  Lessons (12)   │  Antipatterns (3)│  Timeline               │
+├─────────────────┴──────────────────┴─────────────────────────┤
+│  🔍 Search lessons...                     [Filter by tag ▾]  │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │ Fix race condition in queue processor                  │   │
+│  │ Problem: Shared state accessed without lock            │   │
+│  │ Solution: Added mutex around worker.ts                 │   │
+│  │ [concurrency] [bug-fix]              ⚠ Risk: high     │   │
+│  └───────────────────────────────────────────────────────┘   │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │ Add retry logic for API timeouts                       │   │
+│  │ Problem: Requests fail silently on network errors      │   │
+│  │ [networking] [resilience]             ✓ Risk: none     │   │
+│  └───────────────────────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────┘
+```
 
-### Timeline & Focus Areas
+</details>
 
-Pick a time period (24h, 7d, 14d, 30d, 90d, 6mo, 1yr) and get a Gemini-generated summary of improvements. Focus areas highlight which themes are **strong** (green badges) and which **need attention** (amber badges) — across Testing, Security, Performance, Architecture, and more. Summaries are cached for 24 hours.
+<details>
+<summary><strong>Timeline & Focus Areas</strong> — AI-generated summaries with strong/weak analysis</summary>
 
-### Error Assistant (Ask)
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Timeline                                                     │
+│                     [24h] [7d] [14d] [30d] [90d] [6mo] [1yr] │
+│                                                               │
+│  ┌─ Summary ──────────────────────────────────────────────┐  │
+│  │ Over the past 30 days, the team focused on improving   │  │
+│  │ test coverage and resolving concurrency issues. Three   │  │
+│  │ high-risk antipatterns were identified and addressed... │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌─ Focus Areas ──────────────────────────────────────────┐  │
+│  │ Strong:          Testing ✓    Architecture ✓           │  │
+│  │ Needs attention: Security ⚠   Observability ⚠         │  │
+│  │                                                        │  │
+│  │ Counts: Testing 8 · Security 1 · Performance 4        │  │
+│  │         Architecture 6 · Observability 1               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌─ Testing ──────────────────────────────────────────────┐  │
+│  │ • Added integration tests for auth flow                │  │
+│  │ • Fixed flaky CI tests by mocking timers               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌─ Follow-up ────────────────────────────────────────────┐  │
+│  │ Consider adding security audit for the new API         │  │
+│  │ endpoints introduced this month.                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────┘
+```
 
-Paste an error or stack trace into the Ask page. DevMem performs a RAG search across your knowledge base and returns a contextual answer with **similar past incidents**, **root causes**, and **suggested fix steps** — all sourced from real lessons in your project.
+</details>
 
-### MCP in Claude Code
+<details>
+<summary><strong>Error Assistant</strong> — Paste an error, get context from past incidents</summary>
 
-From your IDE, ask your agent things like *"Have we seen this error before?"* or *"Save this fix as a lesson."* The MCP server handles it — no browser needed. Tool calls show up inline in your agent's conversation.
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Ask — My Project                                             │
+│                                                               │
+│  ┌─ Your question ────────────────────────────────────────┐  │
+│  │ TypeError: Cannot read property 'status' of undefined  │  │
+│  │ at processQueue (worker.ts:42)                         │  │
+│  │ at async main (index.ts:15)                            │  │
+│  └──────────────────────────────────────────────────[Ask]─┘  │
+│                                                               │
+│  ┌─ Answer ───────────────────────────────────────────────┐  │
+│  │ This error was seen before in a race condition where   │  │
+│  │ the queue processor accessed shared state before the   │  │
+│  │ worker finished initializing. The fix was to add a     │  │
+│  │ mutex lock around the shared state in worker.ts.       │  │
+│  │                                                        │  │
+│  │ Sources:                                               │  │
+│  │  • "Fix race condition in queue processor"             │  │
+│  │  • "Add worker initialization guard"                   │  │
+│  │                                                        │  │
+│  │ Suggested steps:                                       │  │
+│  │  1. Check if worker.ts:42 accesses shared state       │  │
+│  │  2. Add null check or await initialization             │  │
+│  │  3. Consider adding a mutex lock                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────────┘
+```
+
+</details>
+
+<details>
+<summary><strong>MCP in Claude Code</strong> — Use DevMem tools directly from your IDE</summary>
+
+```
+┌─ Claude Code ─────────────────────────────────────────────────┐
+│                                                               │
+│  You: Have we seen this error before?                         │
+│       TypeError: Cannot read property 'status' of undefined   │
+│                                                               │
+│  Claude: I'll search your project's knowledge base.           │
+│                                                               │
+│  ┌─ Tool call: devmem_search ────────────────────────────┐   │
+│  │ query: "TypeError: Cannot read property 'status'..."   │   │
+│  │ mode: "error"                                          │   │
+│  └────────────────────────────────────────────────────────┘   │
+│                                                               │
+│  Claude: Yes — this matches a known issue. A race condition   │
+│  in the queue processor was fixed by adding a mutex lock.     │
+│  See lesson: "Fix race condition in queue processor"          │
+│                                                               │
+│  Would you like me to save the current fix as a new lesson?   │
+│                                                               │
+│  You: Yes, save it.                                           │
+│                                                               │
+│  ┌─ Tool call: devmem_save_lesson ───────────────────────┐   │
+│  │ commit_message: "fix: add null guard in worker.ts"     │   │
+│  │ diff_summary: "Added optional chaining for status..."  │   │
+│  └────────────────────────────────────────────────────────┘   │
+│                                                               │
+│  Claude: Lesson saved: "Add null guard for worker status"     │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+</details>
 
 > [!NOTE]
-> Replace this section with actual screenshots once available. Drop images into `docs/screenshots/` and reference them here.
+> These are text representations of the actual UI. Replace with screenshots once available — drop images into `docs/screenshots/` and reference them here.
 
 ---
 
