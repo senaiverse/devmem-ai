@@ -10,7 +10,6 @@ import { ProjectDetailPage } from '@/routes/project-detail'
 import { AskPage } from '@/routes/ask'
 import { ImportPage } from '@/routes/import'
 import { KnowledgePage } from '@/routes/knowledge'
-import { Analytics } from '@vercel/analytics/react'
 
 /**
  * Root application component.
@@ -40,7 +39,6 @@ export function App() {
           </BrowserRouter>
         </TooltipProvider>
       </PowerSyncProvider>
-      <Analytics />
     </ThemeProvider>
   )
 }
