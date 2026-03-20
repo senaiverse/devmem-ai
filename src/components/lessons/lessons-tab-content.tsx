@@ -13,7 +13,7 @@ interface LessonsTabContentProps {
   filterTag: string
   onFilterTagChange: (tag: string) => void
   projectName: string
-  onCreateLesson: (fields: LessonWriteFields) => Promise<void>
+  onCreateLesson: (fields: LessonWriteFields) => Promise<string>
   onUpdateLesson: (lessonId: string, fields: Partial<LessonWriteFields>) => Promise<void>
   onDeleteLesson: (lessonId: string) => Promise<void>
 }

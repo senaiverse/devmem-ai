@@ -48,9 +48,7 @@ export function ProjectFormDialog({ onSubmit }: ProjectFormDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>New Project</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button>New Project</Button>} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>

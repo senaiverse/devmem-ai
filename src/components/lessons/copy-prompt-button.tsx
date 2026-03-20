@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import { generateRefactorPrompt } from '@/services/prompt-generator'
 import type { Lesson } from '@/types/lesson'
@@ -15,6 +15,7 @@ interface CopyPromptButtonProps {
 
 /**
  * Button that copies a structured AI refactoring prompt to clipboard.
+ * Uses the global TooltipProvider from App.tsx.
  */
 export function CopyPromptButton({
   lesson,
@@ -33,15 +34,15 @@ export function CopyPromptButton({
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
+    <Tooltip>
+      <TooltipTrigger
+        render={
           <Button variant={variant} size={size} onClick={handleCopy} aria-label="Copy refactor prompt">
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
-        </TooltipTrigger>
-        <TooltipContent>Copy AI refactor prompt</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        }
+      />
+      <TooltipContent>Copy AI refactor prompt</TooltipContent>
+    </Tooltip>
   )
 }

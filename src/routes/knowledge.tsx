@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@powersync/react'
 import { buttonVariants } from '@/components/ui/button'
 import { DocumentTable } from '@/components/knowledge/document-table'
+import { ErrorAlert } from '@/components/shared/error-alert'
 import { useDocuments } from '@/hooks/use-documents'
 import type { Project } from '@/types/project'
 
@@ -31,11 +32,7 @@ export function KnowledgePage() {
         </Link>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       <DocumentTable
         documents={documents}

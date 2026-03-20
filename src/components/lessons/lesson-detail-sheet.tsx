@@ -59,7 +59,7 @@ export function LessonDetailSheet({
   }
 
   async function handleDelete() {
-    if (!onDelete) return
+    if (!onDelete || !lesson) return
     await onDelete(lesson.id)
     onOpenChange(false)
   }
@@ -88,11 +88,13 @@ export function LessonDetailSheet({
                 )}
                 {onDelete && (
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label="Delete">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
+                    <AlertDialogTrigger
+                      render={
+                        <Button variant="ghost" size="icon" aria-label="Delete">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      }
+                    />
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Lesson</AlertDialogTitle>

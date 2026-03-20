@@ -47,7 +47,12 @@ export function AntiPatternsTabContent({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Antipatterns ({count})</h2>
+        <div>
+          <h2 className="text-lg font-semibold">Antipatterns ({count})</h2>
+          <p className="text-sm text-muted-foreground">
+            Lessons flagged with potential code smells or tech debt. Click &quot;Classify All&quot; to scan unclassified lessons.
+          </p>
+        </div>
         <Button
           variant="outline"
           size="sm"

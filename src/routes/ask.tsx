@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@powersync/react'
 import { buttonVariants } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { AskForm } from '@/components/questions/ask-form'
 import { AnswerDisplay } from '@/components/questions/answer-display'
 import { QuestionHistory } from '@/components/questions/question-history'
+import { ErrorAlert } from '@/components/shared/error-alert'
 import { useSearch } from '@/hooks/use-search'
 import { useQuestions } from '@/hooks/use-questions'
 import type { Project } from '@/types/project'
@@ -15,6 +16,7 @@ import type { SearchMode } from '@/types/api'
 
 /**
  * /projects/:id/ask — RAG-powered Q&A page with Question and Error modes.
+ * Query state is lifted so input persists across tab switches.
  */
 export function AskPage() {
   const { id } = useParams<{ id: string }>()
@@ -25,11 +27,20 @@ export function AskPage() {
   const project = projectRows[0] ?? null
 
   const [mode, setMode] = useState<SearchMode>('question')
+  const [query, setQuery] = useState('')
   const { search, result, isSearching, error, reset } = useSearch(id!)
   const { questions, isLoading: isLoadingHistory } = useQuestions(id!)
 
-  function handleSubmit(query: string) {
-    search(query, mode)
+  const resultRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (result && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [result])
+
+  function handleSubmit(q: string) {
+    search(q, mode)
   }
 
   return (
@@ -54,6 +65,8 @@ export function AskPage() {
         <TabsContent value="question">
           <AskForm
             mode="question"
+            query={query}
+            onQueryChange={setQuery}
             onSubmit={handleSubmit}
             isSearching={isSearching}
           />
@@ -61,20 +74,18 @@ export function AskPage() {
         <TabsContent value="error">
           <AskForm
             mode="error"
+            query={query}
+            onQueryChange={setQuery}
             onSubmit={handleSubmit}
             isSearching={isSearching}
           />
         </TabsContent>
       </Tabs>
 
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {result && (
-        <div>
+        <div ref={resultRef}>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Result</h2>
             <Button variant="ghost" size="sm" onClick={reset}>

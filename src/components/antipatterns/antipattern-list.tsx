@@ -1,5 +1,7 @@
+import { ShieldCheck } from 'lucide-react'
 import { AntipatternCard } from './antipattern-card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/shared/empty-state'
 import type { Lesson } from '@/types/lesson'
 
 interface AntipatternListProps {
@@ -33,9 +35,11 @@ export function AntipatternList({ grouped, isLoading, projectName, onViewLesson 
 
   if (!hasAny) {
     return (
-      <div className="py-8 text-center text-sm text-muted-foreground">
-        No antipatterns detected. All lessons look clean.
-      </div>
+      <EmptyState
+        icon={ShieldCheck}
+        title="No antipatterns detected"
+        description="All lessons look clean. Run classification to scan for potential issues."
+      />
     )
   }
 

@@ -1,10 +1,20 @@
 {
   "version": 1,
   "skills": {
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
     "powersync": {
       "source": "powersync-ja/agent-skills",
       "sourceType": "github",
       "computedHash": "61eafdfb72f3a0b2d63fd91f6e5105de13379a807b1283838995c586ebc454ac"
+    },
+    "react-ui-patterns": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "6c004e2900e1c11452e3de3ff144e287daf69fcdcb6f27c11483d34bddb57326"
     },
     "react-vite-expert": {
       "source": "questfortech-investments/claude-code-skills",
@@ -15,6 +25,11 @@
       "source": "jezweb/claude-skills",
       "sourceType": "github",
       "computedHash": "f86d41cbe62c1224b77b673413a0141930a7d5d7054ea60a8192e354198cd71e"
+    },
+    "suggest-lucide-icons": {
+      "source": "nweii/agent-stuff",
+      "sourceType": "github",
+      "computedHash": "a693a5622f55b45cc6cf4cb396f44ff75b86420f5f1373890daa44c884907e48"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",

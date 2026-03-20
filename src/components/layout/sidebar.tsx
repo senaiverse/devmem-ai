@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@powersync/react'
+import { Brain } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -19,7 +20,8 @@ export function Sidebar() {
     <aside className="hidden w-64 flex-shrink-0 border-r bg-card md:block">
       <div className="flex h-14 items-center border-b px-4">
         <Link to="/projects" className="flex items-center gap-2 font-semibold">
-          <span className="text-lg">DEV-MEMORY-LEDGER</span>
+          <Brain className="h-5 w-5 text-primary" />
+          <span className="text-lg">Dev Memory Ledger</span>
         </Link>
       </div>
       <ScrollArea className="h-[calc(100vh-3.5rem)]">

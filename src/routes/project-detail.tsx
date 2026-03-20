@@ -1,16 +1,36 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@powersync/react'
+import { MoreHorizontal, FileUp, BookOpen, Trash2 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { StatsCards } from '@/components/projects/stats-cards'
 import { LessonsTabContent } from '@/components/lessons/lessons-tab-content'
 import { AntiPatternsTabContent } from '@/components/antipatterns/antipatterns-tab-content'
 import { TimelineTabContent } from '@/components/timeline/timeline-tab-content'
 import { ConnectionIndicator } from '@/components/ui/connection-indicator'
 import { BriefcaseToggle } from '@/components/projects/briefcase-toggle'
+import { ProjectHeaderEdit } from '@/components/projects/project-header-edit'
 import { OfflineBanner } from '@/components/projects/offline-banner'
 import { useLessons } from '@/hooks/use-lessons'
 import { useProjects } from '@/hooks/use-projects'
@@ -26,7 +46,7 @@ import type { Project } from '@/types/project'
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { deleteProject } = useProjects()
+  const { updateProject, deleteProject } = useProjects()
   const { isOnline } = useSyncStatus()
   const { isPinned, togglePin } = useBriefcase()
 
@@ -59,32 +79,65 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{project.name}</h1>
-            <ConnectionIndicator />
-          </div>
-          <div className="flex gap-2">
-            <BriefcaseToggle isPinned={isPinned(id!)} onToggle={() => togglePin(id!)} />
-            <Link to={`/projects/${id}/ask`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Ask a Question
-            </Link>
-            <Link to={`/projects/${id}/import`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Import Docs
-            </Link>
-            <Link to={`/projects/${id}/knowledge`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-              Knowledge Base
-            </Link>
-            <Button variant="destructive" size="sm" onClick={handleDelete}>
-              Delete
-            </Button>
-          </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex items-start gap-3">
+          <ProjectHeaderEdit
+            name={project.name}
+            description={project.description}
+            onSave={(name, slug, description) =>
+              updateProject(id!, { name, slug, description })
+            }
+          />
+          <ConnectionIndicator />
         </div>
-        {project.description && (
-          <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
-        )}
+        <div className="flex gap-2">
+          <BriefcaseToggle isPinned={isPinned(id!)} onToggle={() => togglePin(id!)} />
+          <Link to={`/projects/${id}/ask`} className={buttonVariants({ size: 'sm' })}>
+            Ask
+          </Link>
+          <AlertDialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="icon" aria-label="More actions">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem render={<Link to={`/projects/${id}/import`} />}>
+                  <FileUp className="h-4 w-4" /> Import Docs
+                </DropdownMenuItem>
+                <DropdownMenuItem render={<Link to={`/projects/${id}/knowledge`} />}>
+                  <BookOpen className="h-4 w-4" /> Knowledge Base
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <AlertDialogTrigger
+                  render={
+                    <DropdownMenuItem variant="destructive">
+                      <Trash2 className="h-4 w-4" /> Delete Project
+                    </DropdownMenuItem>
+                  }
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete &ldquo;{project.name}&rdquo; and all its lessons, embeddings, and history. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={handleDelete}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <OfflineBanner isOnline={isOnline} isPinned={isPinned(id!)} />

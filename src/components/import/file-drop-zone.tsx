@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { CloudUpload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +52,7 @@ export function FileDropZone({
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
     >
+      <CloudUpload className="mb-3 h-8 w-8 text-muted-foreground/50" />
       <p className="mb-2 text-sm font-medium">
         {isDragging ? 'Drop files here' : 'Drag & drop files here'}
       </p>

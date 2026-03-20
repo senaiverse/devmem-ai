@@ -1,4 +1,4 @@
-import { Briefcase } from 'lucide-react'
+import { Pin, PinOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface BriefcaseToggleProps {
@@ -8,19 +8,22 @@ interface BriefcaseToggleProps {
 
 /**
  * Toggle button for pinning a project to the Offline Briefcase.
- * Pinned projects show offline-ready banners when disconnected.
+ * Stable "Offline" label; icon conveys pinned/unpinned state.
  */
 export function BriefcaseToggle({ isPinned, onToggle }: BriefcaseToggleProps) {
   return (
     <Button
-      variant={isPinned ? 'default' : 'ghost'}
+      variant={isPinned ? 'default' : 'outline'}
       size="sm"
       onClick={onToggle}
-      title={isPinned ? 'Pinned for offline use' : 'Pin for offline use'}
       aria-label={isPinned ? 'Unpin from offline briefcase' : 'Pin to offline briefcase'}
     >
-      <Briefcase className="mr-1 h-4 w-4" />
-      {isPinned ? 'Briefcase' : 'Pin Offline'}
+      {isPinned ? (
+        <Pin className="mr-1 h-3.5 w-3.5" />
+      ) : (
+        <PinOff className="mr-1 h-3.5 w-3.5" />
+      )}
+      Offline
     </Button>
   )
 }

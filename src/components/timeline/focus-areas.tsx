@@ -26,7 +26,7 @@ export function FocusAreas({ strong, weak, counts }: FocusAreasProps) {
               <Badge
                 key={theme}
                 variant="outline"
-                className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200"
+                className="border-success/50 bg-success/10 text-success"
               >
                 {theme}
                 <span className="ml-1 text-[10px] opacity-60">{counts[theme]}</span>
@@ -42,7 +42,7 @@ export function FocusAreas({ strong, weak, counts }: FocusAreasProps) {
               <Badge
                 key={theme}
                 variant="outline"
-                className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                className="border-warning/50 bg-warning/10 text-warning"
               >
                 {theme}
                 <span className="ml-1 text-[10px] opacity-60">{counts[theme]}</span>

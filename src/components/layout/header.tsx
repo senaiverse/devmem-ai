@@ -1,8 +1,9 @@
 import { useStatus } from '@powersync/react'
 import { useTheme } from 'next-themes'
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, Brain } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { MobileSidebar } from '@/components/layout/mobile-sidebar'
 
 /**
  * Top header bar showing sync status and theme toggle.
@@ -20,8 +21,10 @@ export function Header() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
-      <div className="md:hidden text-lg font-semibold">
-        DEV-MEMORY-LEDGER
+      <div className="flex items-center gap-2 md:hidden">
+        <MobileSidebar />
+        <Brain className="h-5 w-5 text-primary" />
+        <span className="text-lg font-semibold">Dev Memory Ledger</span>
       </div>
       <div className="flex items-center gap-3 ml-auto">
         <Button

@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Calendar } from 'lucide-react'
+import { Loader2, Calendar, Clock } from 'lucide-react'
+import { ErrorAlert } from '@/components/shared/error-alert'
+import { EmptyState } from '@/components/shared/empty-state'
 import { useTimeline } from '@/hooks/use-timeline'
 import { FocusAreas } from '@/components/timeline/focus-areas'
 
@@ -78,15 +80,12 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      <ErrorAlert message={error} />
 
       {isLoading && (
-        <div className="py-8 text-center text-sm text-muted-foreground">
-          Generating summary...
+        <div className="flex items-center justify-center gap-2 py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Generating summary...</span>
         </div>
       )}
 
@@ -103,7 +102,7 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
                 )}
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="max-h-64 overflow-y-auto">
               <p className="whitespace-pre-wrap text-sm">{result.summary}</p>
             </CardContent>
           </Card>
@@ -118,7 +117,9 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
 
           {Object.keys(result.themes).length > 0 && (
             <div className="space-y-3">
-              {Object.entries(result.themes).map(([theme, items]) => (
+              {Object.entries(result.themes)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([theme, items]) => (
                 <Card key={theme}>
                   <CardContent className="p-4">
                     <div className="mb-2 flex items-center gap-2">
@@ -136,7 +137,7 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
           )}
 
           {result.follow_up && (
-            <Card className="border-amber-200 dark:border-amber-800">
+            <Card className="border-warning/50">
               <CardContent className="p-4">
                 <h3 className="mb-1 text-sm font-semibold">Follow-up</h3>
                 <p className="text-sm text-muted-foreground">{result.follow_up}</p>
@@ -147,9 +148,11 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
       )}
 
       {!result && !isLoading && !error && (
-        <div className="py-8 text-center text-sm text-muted-foreground">
-          Select a time period to generate an improvement summary.
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="Select a time period"
+          description="Choose a period above to generate an improvement summary powered by Gemini."
+        />
       )}
     </div>
   )

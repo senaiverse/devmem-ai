@@ -17,8 +17,8 @@ export function OfflineBanner({ isOnline, isPinned }: OfflineBannerProps) {
     <div
       className={`flex items-center gap-2 rounded-md border p-3 text-sm ${
         isPinned
-          ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200'
-          : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200'
+          ? 'border-info/50 bg-info/10 text-info'
+          : 'border-warning/50 bg-warning/10 text-warning'
       }`}
     >
       <WifiOff className="h-4 w-4 shrink-0" />

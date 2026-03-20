@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, usePowerSync } from '@powersync/react'
+import { Loader2 } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { FileDropZone } from '@/components/import/file-drop-zone'
 import { ImportQueueList } from '@/components/import/import-queue-list'
@@ -68,9 +69,7 @@ export function ImportPage() {
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="category" className="text-sm font-medium">
-          Category
-        </label>
+        <p className="text-sm font-medium">Category</p>
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => (
             <Button
@@ -89,6 +88,13 @@ export function ImportPage() {
         onFilesSelected={handleFilesSelected}
         disabled={isUploading}
       />
+
+      {isUploading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Uploading files...
+        </div>
+      )}
 
       {id && <ImportQueueList projectId={id} />}
     </div>

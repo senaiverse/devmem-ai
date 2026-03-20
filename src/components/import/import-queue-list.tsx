@@ -1,6 +1,8 @@
 import { usePowerSync } from '@powersync/react'
+import { Inbox } from 'lucide-react'
 import { useIngestJobs } from '@/hooks/use-ingest-jobs'
 import { retryIngestJob, cancelIngestJob } from '@/services/ingest.service'
+import { EmptyState } from '@/components/shared/empty-state'
 import { ImportQueueItem } from './import-queue-item'
 
 interface ImportQueueListProps {
@@ -24,7 +26,17 @@ export function ImportQueueList({ projectId }: ImportQueueListProps) {
     await cancelIngestJob(db, jobId, storagePath)
   }
 
-  if (isLoading || jobs.length === 0) return null
+  if (isLoading) return null
+
+  if (jobs.length === 0) {
+    return (
+      <EmptyState
+        icon={Inbox}
+        title="No imports yet"
+        description="Upload files above to start processing."
+      />
+    )
+  }
 
   return (
     <div className="space-y-3">

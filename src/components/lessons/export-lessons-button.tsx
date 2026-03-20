@@ -36,12 +36,14 @@ export function ExportLessonsButton({ lessons, projectName }: ExportLessonsButto
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={lessons.length === 0}>
-          <Download className="mr-1 h-4 w-4" />
-          Export
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="sm" disabled={lessons.length === 0}>
+            <Download className="mr-1 h-4 w-4" />
+            Export
+          </Button>
+        }
+      />
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleMarkdown}>Export as Markdown</DropdownMenuItem>
         <DropdownMenuItem onClick={handleJson}>Export as JSON</DropdownMenuItem>
