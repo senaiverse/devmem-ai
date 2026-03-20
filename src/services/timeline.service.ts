@@ -1,10 +1,19 @@
 import { EDGE_FUNCTIONS_URL } from '@/lib/constants'
 
+/** Focus areas analysis — strong vs weak themes based on tag frequency. */
+export interface FocusAreas {
+  strong: string[]
+  weak: string[]
+  counts: Record<string, number>
+}
+
 /** Response from the summarize-period Edge Function. */
 export interface SummarizePeriodResponse {
   summary: string
   themes: Record<string, string[]>
   follow_up: string
+  focusAreas?: FocusAreas
+  cached?: boolean
 }
 
 /**

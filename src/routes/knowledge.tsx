@@ -40,6 +40,7 @@ export function KnowledgePage() {
       <DocumentTable
         documents={documents}
         isLoading={isLoading}
+        projectId={id!}
         onDelete={deleteDocument}
       />
     </div>

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Calendar } from 'lucide-react'
 import { useTimeline } from '@/hooks/use-timeline'
+import { FocusAreas } from '@/components/timeline/focus-areas'
 
 interface TimelineTabContentProps {
   projectId: string
@@ -16,23 +17,31 @@ interface PeriodPreset {
 }
 
 const PERIOD_PRESETS: PeriodPreset[] = [
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
-  { label: 'This year', days: 365 },
+  { label: '24h', days: 1 },
+  { label: '7d', days: 7 },
+  { label: '14d', days: 14 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+  { label: '6mo', days: 180 },
+  { label: '1yr', days: 365 },
 ]
 
 /**
- * Computes ISO date string for N days ago from today.
+ * Computes ISO date string for N days ago, snapped to midnight UTC
+ * for stable cache keys. The 24h preset is not snapped.
  */
 function daysAgoISO(days: number): string {
   const date = new Date()
   date.setDate(date.getDate() - days)
+  if (days > 1) {
+    date.setUTCHours(0, 0, 0, 0)
+  }
   return date.toISOString()
 }
 
 /**
  * Content for the Timeline tab: period selector buttons
- * and the Gemini-generated improvement summary.
+ * and the Gemini-generated improvement summary with focus areas.
  */
 export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
   const { fetchSummary, result, isLoading, error } = useTimeline(projectId)
@@ -49,7 +58,7 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Timeline</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {PERIOD_PRESETS.map((preset) => (
             <Button
               key={preset.label}
@@ -59,9 +68,9 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
               disabled={isLoading}
             >
               {isLoading && activePeriod === preset.label ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : (
-                <Calendar className="mr-1 h-4 w-4" />
+                <Calendar className="mr-1 h-3 w-3" />
               )}
               {preset.label}
             </Button>
@@ -85,12 +94,27 @@ export function TimelineTabContent({ projectId }: TimelineTabContentProps) {
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Summary</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Summary</CardTitle>
+                {result.cached && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Cached
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap text-sm">{result.summary}</p>
             </CardContent>
           </Card>
+
+          {result.focusAreas && (
+            <FocusAreas
+              strong={result.focusAreas.strong}
+              weak={result.focusAreas.weak}
+              counts={result.focusAreas.counts}
+            />
+          )}
 
           {Object.keys(result.themes).length > 0 && (
             <div className="space-y-3">

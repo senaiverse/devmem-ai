@@ -1,0 +1,6 @@
+{
+  "project_slug": "dev-memory-ledger",
+  "commit_message": "feat: add antipattern search mode and shared project resolver",
+  "diff_summary": "Refactored the search Edge Function to extract a shared parseStructuredResponse helper, reducing code duplication between error mode and the new antipattern mode. Moved project resolution into a shared resolve-project.ts utility that accepts either project_id or project_slug.",
+  "notes": "This change improves maintainability by centralizing project slug resolution and structured JSON parsing. Previously each Edge Function independently validated project_id with no slug support."
+}

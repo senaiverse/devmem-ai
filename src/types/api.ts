@@ -14,20 +14,30 @@ export interface IngestDocResponse {
   lessons_created: number;
 }
 
+/** Resolved project identity returned in agent API responses. */
+export interface ProjectIdentity {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 /** Request body for POST /api/create-lesson-from-change */
 export interface CreateLessonRequest {
-  project_id: string;
+  project_id?: string;
+  project_slug?: string;
   diff_summary?: string;
   error_log?: string;
   notes?: string;
+  commit_message?: string;
 }
 
-/** Search mode: standard question or error/stack-trace analysis. */
-export type SearchMode = 'question' | 'error';
+/** Search mode: question, error/stack-trace, or antipattern analysis. */
+export type SearchMode = 'question' | 'error' | 'antipattern';
 
 /** Request body for POST /api/search */
 export interface SearchRequest {
-  project_id: string;
+  project_id?: string;
+  project_slug?: string;
   query: string;
   mode?: SearchMode;
 }
@@ -44,13 +54,15 @@ export interface SearchResponse {
     title?: string;
   }>;
   question_id: string;
-  /** Present in error mode — lessons similar to the pasted error/stack trace. */
+  /** Resolved project identity (present in agent API responses). */
+  project?: ProjectIdentity;
+  /** Present in error/antipattern modes — lessons similar to the input. */
   similar_lessons?: Array<{
     lesson_id: string;
     title: string;
     reason: string;
   }>;
-  /** Present in error mode — suggested resolution steps. */
+  /** Present in error/antipattern modes — suggested resolution steps. */
   suggested_steps?: string[];
 }
 

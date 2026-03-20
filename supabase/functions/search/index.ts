@@ -2,6 +2,7 @@ import { handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts';
 import { createAdminClient } from '../_shared/supabase-client.ts';
 import { generateEmbedding } from '../_shared/embeddings.ts';
 import { createGeminiClient, promptGemini } from '../_shared/gemini-client.ts';
+import { resolveProject } from '../_shared/resolve-project.ts';
 
 /** Tags that boost similarity scores in error mode. */
 const ERROR_BOOST_TAGS = new Set([
@@ -12,19 +13,88 @@ const ERROR_BOOST_TAGS = new Set([
 /** Similarity bonus applied to lessons with error-relevant tags. */
 const TAG_BOOST = 0.15;
 
+/** Risk-level weights for antipattern mode re-ranking. */
+const RISK_WEIGHTS: Record<string, number> = {
+  high: 0.3,
+  medium: 0.2,
+  low: 0.1,
+  none: 0,
+};
+
+/**
+ * Parses a structured JSON response from Gemini for error/antipattern modes.
+ * Validates lesson IDs against the actual fetched set to prevent hallucination.
+ */
+function parseStructuredResponse(
+  responseText: string,
+  validLessonIds: Set<string>,
+  lessons: Array<Record<string, unknown>>
+): {
+  answer: string;
+  similar_lessons: Array<{ lesson_id: string; title: string; reason: string }>;
+  suggested_steps: string[];
+} {
+  const jsonMatch = responseText.match(/{[\s\S]*}/);
+
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      let similarLessons = Array.isArray(parsed.similar_lessons)
+        ? parsed.similar_lessons.filter(
+            (sl: { lesson_id: string }) => validLessonIds.has(sl.lesson_id)
+          )
+        : [];
+
+      similarLessons = similarLessons.map(
+        (sl: { lesson_id: string; title: string; reason: string }) => {
+          const actual = lessons.find((l) => l.id === sl.lesson_id);
+          return {
+            lesson_id: sl.lesson_id,
+            title: (actual?.title as string) || sl.title,
+            reason: sl.reason,
+          };
+        }
+      );
+
+      return {
+        answer: parsed.summary || responseText,
+        similar_lessons: similarLessons,
+        suggested_steps: Array.isArray(parsed.suggested_steps)
+          ? parsed.suggested_steps
+          : [],
+      };
+    } catch {
+      return { answer: responseText, similar_lessons: [], suggested_steps: [] };
+    }
+  }
+
+  return {
+    answer: responseText || 'No analysis generated.',
+    similar_lessons: [],
+    suggested_steps: [],
+  };
+}
+
 Deno.serve(async (req) => {
   const corsResp = handleCors(req);
   if (corsResp) return corsResp;
 
   try {
-    const { project_id, query, mode = 'question' } = await req.json();
+    const body = await req.json();
+    const { query, mode = 'question' } = body;
 
-    if (!project_id || !query) {
-      return errorResponse('Missing required fields: project_id, query');
+    if (!query) {
+      return errorResponse('Missing required field: query');
     }
 
     const supabase = createAdminClient();
+    const project = await resolveProject(supabase, body);
+    const project_id = project.id;
+
     const isErrorMode = mode === 'error';
+    const isAntipatternMode = mode === 'antipattern';
+    const isStructuredMode = isErrorMode || isAntipatternMode;
 
     // 1. Embed the query
     const queryEmbedding = await generateEmbedding(query);
@@ -34,20 +104,20 @@ Deno.serve(async (req) => {
       'match_document_chunks',
       {
         query_embedding: JSON.stringify(queryEmbedding),
-        match_threshold: isErrorMode ? 0.2 : 0.3,
-        match_count: isErrorMode ? 10 : 5,
+        match_threshold: isStructuredMode ? 0.2 : 0.3,
+        match_count: isStructuredMode ? 10 : 5,
         filter_project_id: project_id,
       }
     );
     if (chunkError) console.error('Chunk search error:', chunkError);
 
-    // 3. Search lesson embeddings (wider net in error mode)
+    // 3. Search lesson embeddings (wider net in structured modes)
     const { data: lessonMatches, error: lessonError } = await supabase.rpc(
       'match_lesson_embeddings',
       {
         query_embedding: JSON.stringify(queryEmbedding),
-        match_threshold: isErrorMode ? 0.2 : 0.3,
-        match_count: isErrorMode ? 20 : 5,
+        match_threshold: isStructuredMode ? 0.2 : 0.3,
+        match_count: isStructuredMode ? 20 : 5,
         filter_project_id: project_id,
       }
     );
@@ -64,8 +134,28 @@ Deno.serve(async (req) => {
       lessons = data || [];
     }
 
-    // 5. In error mode, re-rank with tag boosting and take top 5
-    if (isErrorMode && lessons.length > 0) {
+    // 4b. In antipattern mode, also fetch lessons with known risk (merge by dedup)
+    if (isAntipatternMode) {
+      const { data: riskyLessons } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('project_id', project_id)
+        .neq('risk_level', 'none')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (riskyLessons) {
+        const existingIds = new Set(lessons.map((l) => l.id as string));
+        for (const rl of riskyLessons) {
+          if (!existingIds.has(rl.id)) {
+            lessons.push(rl);
+          }
+        }
+      }
+    }
+
+    // 5. In structured modes, re-rank and take top 5
+    if (isStructuredMode && lessons.length > 0) {
       const similarityMap = new Map(
         (lessonMatches || []).map((m: { lesson_id: string; similarity: number }) => [
           m.lesson_id,
@@ -80,10 +170,13 @@ Deno.serve(async (req) => {
         const tagsA = Array.isArray(a.tags) ? a.tags as string[] : [];
         const tagsB = Array.isArray(b.tags) ? b.tags as string[] : [];
 
-        const boostA = tagsA.some((t) => ERROR_BOOST_TAGS.has(t.toLowerCase())) ? TAG_BOOST : 0;
-        const boostB = tagsB.some((t) => ERROR_BOOST_TAGS.has(t.toLowerCase())) ? TAG_BOOST : 0;
+        const tagBoostA = tagsA.some((t) => ERROR_BOOST_TAGS.has(t.toLowerCase())) ? TAG_BOOST : 0;
+        const tagBoostB = tagsB.some((t) => ERROR_BOOST_TAGS.has(t.toLowerCase())) ? TAG_BOOST : 0;
 
-        return (simB + boostB) - (simA + boostA);
+        const riskA = isAntipatternMode ? (RISK_WEIGHTS[(a.risk_level as string) || 'none'] || 0) : 0;
+        const riskB = isAntipatternMode ? (RISK_WEIGHTS[(b.risk_level as string) || 'none'] || 0) : 0;
+
+        return (simB + tagBoostB + riskB) - (simA + tagBoostA + riskA);
       });
 
       lessons = lessons.slice(0, 5);
@@ -104,11 +197,13 @@ Deno.serve(async (req) => {
 
     const context = contextParts.join('\n\n---\n\n');
 
-    // 7. Call Gemini — different prompts for question vs error mode
+    // 7. Call Gemini — different prompts per mode
     const client = createGeminiClient();
     let answer: string;
     let similar_lessons: Array<{ lesson_id: string; title: string; reason: string }> | undefined;
     let suggested_steps: string[] | undefined;
+
+    const validIds = new Set(lessons.map((l) => l.id as string));
 
     if (isErrorMode) {
       const lessonContext = lessons.map((l) =>
@@ -134,45 +229,40 @@ Return a JSON object with:
 Return ONLY the JSON object, no markdown fencing.`;
 
       const responseText = await promptGemini(client, errorPrompt);
-      const jsonMatch = responseText.match(/{[\s\S]*}/);
+      const parsed = parseStructuredResponse(responseText, validIds, lessons);
+      answer = parsed.answer;
+      similar_lessons = parsed.similar_lessons;
+      suggested_steps = parsed.suggested_steps;
 
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          answer = parsed.summary || responseText;
+    } else if (isAntipatternMode) {
+      const lessonContext = lessons.map((l) =>
+        `- ID: ${l.id}, Title: "${l.title}", Risk: ${l.risk_level || 'none'}, Antipattern: ${l.antipattern_name || 'N/A'}, Reason: ${l.antipattern_reason || 'N/A'}, Problem: ${l.problem || 'N/A'}`
+      ).join('\n');
 
-          // Validate lesson IDs against actual fetched set
-          const validIds = new Set(lessons.map((l) => l.id as string));
-          similar_lessons = Array.isArray(parsed.similar_lessons)
-            ? parsed.similar_lessons.filter(
-                (sl: { lesson_id: string }) => validIds.has(sl.lesson_id)
-              )
-            : [];
+      const antipatternPrompt = `You are a software architecture reviewer. A developer is asking about antipatterns and risky practices in their project. Analyze using ONLY the project knowledge below.
 
-          // Map titles from actual data to prevent hallucination
-          similar_lessons = similar_lessons!.map((sl) => {
-            const actual = lessons.find((l) => l.id === sl.lesson_id);
-            return {
-              lesson_id: sl.lesson_id,
-              title: (actual?.title as string) || sl.title,
-              reason: sl.reason,
-            };
-          });
+## Project Knowledge
+${context || 'No relevant context found.'}
 
-          suggested_steps = Array.isArray(parsed.suggested_steps)
-            ? parsed.suggested_steps
-            : [];
-        } catch {
-          // JSON parse failed — use raw text as answer
-          answer = responseText;
-          similar_lessons = [];
-          suggested_steps = [];
-        }
-      } else {
-        answer = responseText || 'No analysis generated.';
-        similar_lessons = [];
-        suggested_steps = [];
-      }
+## Known Antipatterns & Risky Lessons
+${lessonContext || 'None identified yet.'}
+
+## Developer Query
+${query}
+
+Return a JSON object with:
+- summary: string (analysis of antipattern risks relevant to the query)
+- similar_lessons: array of objects { lesson_id: string, title: string, reason: string } (lessons from the list above that are relevant. Use exact IDs from the Available list only.)
+- suggested_steps: array of strings (3-5 concrete steps to address or mitigate the identified risks)
+
+Return ONLY the JSON object, no markdown fencing.`;
+
+      const responseText = await promptGemini(client, antipatternPrompt);
+      const parsed = parseStructuredResponse(responseText, validIds, lessons);
+      answer = parsed.answer;
+      similar_lessons = parsed.similar_lessons;
+      suggested_steps = parsed.suggested_steps;
+
     } else {
       // Standard question mode
       const ragPrompt = `You are a knowledgeable software engineering assistant. Answer the following question based ONLY on the project knowledge provided below. If the context doesn't contain enough information to answer fully, say so.
@@ -221,9 +311,10 @@ Provide a clear, concise answer. Reference specific lessons or documents when re
       answer,
       sources,
       question_id: questionData?.id || null,
+      project: { id: project.id, slug: project.slug, name: project.name },
     };
 
-    if (isErrorMode) {
+    if (isStructuredMode) {
       response.similar_lessons = similar_lessons;
       response.suggested_steps = suggested_steps;
     }

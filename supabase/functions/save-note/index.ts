@@ -1,3 +1,15 @@
+/**
+ * Edge Function: save-note
+ *
+ * Saves a personal note, guideline, standard, or decision as a lesson with
+ * source_type='note'. Uses light AI structuring — Gemini organizes the content
+ * but stays faithful to the original input (no fabrication).
+ *
+ * Unlike create-lesson-from-change (which extracts lessons from code diffs),
+ * this function is designed for human-written knowledge that should be preserved
+ * as-is, with optional AI-assisted tagging and categorization.
+ */
+
 import { handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts';
 import { createAdminClient } from '../_shared/supabase-client.ts';
 import { generateEmbedding } from '../_shared/embeddings.ts';
@@ -11,34 +23,34 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { diff_summary, error_log, notes, commit_message } = body;
+    const { title, content, category } = body;
+
+    if (!content) {
+      return errorResponse('Missing required field: content');
+    }
 
     const supabase = createAdminClient();
     const project = await resolveProject(supabase, body);
-    const project_id = project.id;
 
-    if (!diff_summary && !error_log && !notes) {
-      return errorResponse('At least one of diff_summary, error_log, or notes is required');
-    }
+    // Light AI structuring — stays faithful to the input, no fabrication
+    const prompt = `You are organizing a developer's note for a knowledge base.
 
-    // Build the prompt
-    const contextParts: string[] = [];
-    if (commit_message) contextParts.push(`## Commit Message\n${commit_message}`);
-    if (diff_summary) contextParts.push(`## Code Change\n${diff_summary}`);
-    if (error_log) contextParts.push(`## Error / Stack Trace\n${error_log}`);
-    if (notes) contextParts.push(`## Developer Notes\n${notes}`);
+IMPORTANT: Do NOT invent scenarios, examples, or details that are not in the original text.
+Stay faithful to the developer's actual words. Your job is to structure and summarize,
+not to fabricate.
 
-    const prompt = `You are a software engineering knowledge extractor. Based on this code change / error fix, create a structured lesson for the team's knowledge base.
-
-${contextParts.join('\n\n')}
+${title ? `## Title\n${title}\n` : ''}
+${category ? `## Category\n${category}\n` : ''}
+## Content
+${content}
 
 Return a JSON object with these fields:
-- title: string (concise lesson title)
-- problem: string (what went wrong or what needed to change)
-- root_cause: string (why this happened)
-- solution: string (what was done to fix/improve it)
-- recommendation: string (what to do in the future to prevent this)
-- tags: string[] (2-5 relevant tags)
+- title: string (use the provided title if given, otherwise create a concise title from the content)
+- problem: string (the context or situation described — use "N/A" if the note is a guideline, not a problem)
+- root_cause: string (underlying reason if applicable — use "N/A" if not a problem-solution note)
+- solution: string (the guideline, standard, or decision described — summarize the content faithfully)
+- recommendation: string (actionable takeaway from the note)
+- tags: string[] (2-5 relevant tags extracted from the content)
 
 Return ONLY the JSON object, no markdown fencing.`;
 
@@ -46,23 +58,23 @@ Return ONLY the JSON object, no markdown fencing.`;
     const responseText = await promptGemini(client, prompt);
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return errorResponse('Failed to parse structured lesson from LLM response', 500);
+      return errorResponse('Failed to parse structured note from LLM response', 500);
     }
 
     const lesson = JSON.parse(jsonMatch[0]);
 
-    // Insert lesson
+    // Insert as lesson with source_type='note'
     const { data: lessonData, error: lessonError } = await supabase
       .from('lessons')
       .insert({
-        project_id,
+        project_id: project.id,
         title: lesson.title,
         problem: lesson.problem,
         root_cause: lesson.root_cause,
         solution: lesson.solution,
         recommendation: lesson.recommendation,
         tags: lesson.tags || [],
-        source_type: 'change',
+        source_type: 'note',
         source_ref: null,
       })
       .select()
@@ -70,8 +82,8 @@ Return ONLY the JSON object, no markdown fencing.`;
 
     if (lessonError) throw lessonError;
 
-    // Embed the lesson
-    const lessonText = [lesson.title, lesson.problem, lesson.solution, lesson.recommendation]
+    // Embed for search
+    const lessonText = [lesson.title, lesson.solution, lesson.recommendation]
       .filter(Boolean)
       .join(' ');
     const embedding = await generateEmbedding(lessonText);
@@ -97,7 +109,7 @@ Return ONLY the JSON object, no markdown fencing.`;
       project: { id: project.id, slug: project.slug, name: project.name },
     });
   } catch (error) {
-    console.error('create-lesson-from-change error:', error);
-    return errorResponse(`Failed to create lesson: ${(error as Error).message}`, 500);
+    console.error('save-note error:', error);
+    return errorResponse(`Failed to save note: ${(error as Error).message}`, 500);
   }
 });

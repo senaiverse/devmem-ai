@@ -20,6 +20,9 @@ supabase/.temp/
 .claude/
 .agents/
 
+# MCP config (contains credentials)
+.mcp.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -30,3 +33,32 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+.adal/
+.agent/
+.augment/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/

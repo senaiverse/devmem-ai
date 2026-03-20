@@ -20,21 +20,26 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Sparkles, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { generateLessonsFromDoc } from '@/services/generate-lessons.service'
 import type { DocumentSummary } from '@/types/document'
 
 interface DocumentTableProps {
   documents: DocumentSummary[]
   isLoading: boolean
+  projectId: string
   onDelete: (documentId: string) => Promise<void>
 }
 
 /**
- * Table displaying ingested documents with chunk counts and delete action.
+ * Table displaying ingested documents with chunk counts,
+ * lesson generation action, and delete action.
  */
-export function DocumentTable({ documents, isLoading, onDelete }: DocumentTableProps) {
+export function DocumentTable({ documents, isLoading, projectId, onDelete }: DocumentTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<DocumentSummary | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
 
   async function handleDelete() {
     if (!deleteTarget) return
@@ -44,6 +49,21 @@ export function DocumentTable({ documents, isLoading, onDelete }: DocumentTableP
     } finally {
       setIsDeleting(false)
       setDeleteTarget(null)
+    }
+  }
+
+  async function handleGenerateLessons(doc: DocumentSummary) {
+    setGeneratingId(doc.id)
+    try {
+      const result = await generateLessonsFromDoc(doc.id, projectId)
+      toast.success(
+        `Generated ${result.created_lessons_count} lesson${result.created_lessons_count === 1 ? '' : 's'} — they'll appear in the Lessons tab.`,
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lesson generation failed'
+      toast.error(message)
+    } finally {
+      setGeneratingId(null)
     }
   }
 
@@ -74,7 +94,7 @@ export function DocumentTable({ documents, isLoading, onDelete }: DocumentTableP
             <TableHead>Category</TableHead>
             <TableHead className="text-right">Chunks</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead className="w-12" />
+            <TableHead className="w-24" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,14 +111,30 @@ export function DocumentTable({ documents, isLoading, onDelete }: DocumentTableP
                 {new Date(doc.created_at).toLocaleDateString()}
               </TableCell>
               <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDeleteTarget(doc)}
-                  aria-label={`Delete ${doc.title}`}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleGenerateLessons(doc)}
+                    disabled={generatingId !== null}
+                    title="Generate lessons from this document"
+                    aria-label={`Generate lessons from ${doc.title}`}
+                  >
+                    {generatingId === doc.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteTarget(doc)}
+                    aria-label={`Delete ${doc.title}`}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

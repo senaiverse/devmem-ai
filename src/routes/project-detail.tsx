@@ -9,9 +9,14 @@ import { StatsCards } from '@/components/projects/stats-cards'
 import { LessonsTabContent } from '@/components/lessons/lessons-tab-content'
 import { AntiPatternsTabContent } from '@/components/antipatterns/antipatterns-tab-content'
 import { TimelineTabContent } from '@/components/timeline/timeline-tab-content'
+import { ConnectionIndicator } from '@/components/ui/connection-indicator'
+import { BriefcaseToggle } from '@/components/projects/briefcase-toggle'
+import { OfflineBanner } from '@/components/projects/offline-banner'
 import { useLessons } from '@/hooks/use-lessons'
 import { useProjects } from '@/hooks/use-projects'
 import { useAntipatterns } from '@/hooks/use-antipatterns'
+import { useSyncStatus } from '@/hooks/use-sync-status'
+import { useBriefcase } from '@/hooks/use-briefcase'
 import type { Project } from '@/types/project'
 
 /**
@@ -22,6 +27,8 @@ export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { deleteProject } = useProjects()
+  const { isOnline } = useSyncStatus()
+  const { isPinned, togglePin } = useBriefcase()
 
   const { data: projectRows } = useQuery<Project>(
     'SELECT * FROM projects WHERE id = ? LIMIT 1',
@@ -55,8 +62,12 @@ export function ProjectDetailPage() {
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{project.name}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{project.name}</h1>
+            <ConnectionIndicator />
+          </div>
           <div className="flex gap-2">
+            <BriefcaseToggle isPinned={isPinned(id!)} onToggle={() => togglePin(id!)} />
             <Link to={`/projects/${id}/ask`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
               Ask a Question
             </Link>
@@ -75,6 +86,8 @@ export function ProjectDetailPage() {
           <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
         )}
       </div>
+
+      <OfflineBanner isOnline={isOnline} isPinned={isPinned(id!)} />
 
       <StatsCards projectId={id!} />
 
