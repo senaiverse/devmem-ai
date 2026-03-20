@@ -51,6 +51,7 @@ const ingest_jobs = new Table(
     status: column.text,
     error: column.text,
     document_id: column.text,
+    progress: column.integer,
     created_at: column.text,
     updated_at: column.text,
   },

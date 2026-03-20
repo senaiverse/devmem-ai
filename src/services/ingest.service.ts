@@ -30,8 +30,8 @@ export async function uploadFileToQueue(
   // 2. Insert ingest_jobs row via PowerSync (local-first)
   const now = new Date().toISOString()
   await db.execute(
-    `INSERT INTO ingest_jobs (id, project_id, storage_path, file_name, category, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+    `INSERT INTO ingest_jobs (id, project_id, storage_path, file_name, category, status, progress, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, ?)`,
     [jobId, projectId, storagePath, file.name, category, now, now]
   )
 
@@ -53,7 +53,7 @@ export async function retryIngestJob(
 ): Promise<void> {
   const now = new Date().toISOString()
   await db.execute(
-    `UPDATE ingest_jobs SET status = 'pending', error = NULL, updated_at = ? WHERE id = ?`,
+    `UPDATE ingest_jobs SET status = 'pending', error = NULL, progress = 0, updated_at = ? WHERE id = ?`,
     [now, jobId]
   )
 
@@ -76,6 +76,48 @@ export async function cancelIngestJob(
 
   // Delete the job row via PowerSync
   await db.execute('DELETE FROM ingest_jobs WHERE id = ?', [jobId])
+}
+
+/**
+ * Requests cancellation of a processing ingest job by setting its status
+ * to 'cancelling' directly in Postgres (bypassing PowerSync) so the Edge
+ * Function sees the change on its next status check.
+ *
+ * For pending/failed jobs, use cancelIngestJob() which deletes the row.
+ */
+export async function requestCancelIngestJob(jobId: string): Promise<void> {
+  const { error } = await supabase
+    .from('ingest_jobs')
+    .update({ status: 'cancelling', updated_at: new Date().toISOString() })
+    .eq('id', jobId)
+
+  if (error) {
+    throw new Error(`Failed to request cancellation: ${error.message}`)
+  }
+}
+
+/**
+ * Dismisses a finished ingest job (completed/cancelled/failed) by deleting
+ * the row from the local DB via PowerSync.
+ */
+export async function dismissIngestJob(
+  db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
+  jobId: string
+): Promise<void> {
+  await db.execute('DELETE FROM ingest_jobs WHERE id = ?', [jobId])
+}
+
+/**
+ * Clears all finished ingest jobs (completed, failed, cancelled) for a project.
+ */
+export async function clearFinishedJobs(
+  db: { execute: (sql: string, params: unknown[]) => Promise<unknown> },
+  projectId: string
+): Promise<void> {
+  await db.execute(
+    `DELETE FROM ingest_jobs WHERE project_id = ? AND status IN ('completed', 'failed', 'cancelled')`,
+    [projectId]
+  )
 }
 
 /**

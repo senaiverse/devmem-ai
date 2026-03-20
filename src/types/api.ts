@@ -73,9 +73,13 @@ export interface ProcessIngestJobRequest {
 
 /** Response from POST /api/process-ingest-job */
 export interface ProcessIngestJobResponse {
-  document_id: string;
-  chunk_count: number;
-  lessons_created: number;
+  document_id?: string;
+  chunk_count?: number;
+  lessons_created?: number;
+  /** Present when the job was cancelled mid-processing. */
+  cancelled?: boolean;
+  /** Progress at the time of cancellation (0-100). */
+  progress?: number;
 }
 
 /** Request body for POST /api/embed-lesson */
