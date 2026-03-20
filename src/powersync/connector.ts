@@ -8,7 +8,9 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Connects PowerSync to Supabase.
- * - fetchCredentials: uses PowerSync built-in dev token (no-auth demo).
+ * - fetchCredentials: uses Supabase anonymous auth to get a fresh JWT.
+ *   PowerSync calls this automatically every few minutes, so the token
+ *   never expires. No login UI needed — silent anonymous sign-in.
  * - uploadData: pushes local writes to Supabase via the JS client.
  */
 export class SupabaseConnector implements PowerSyncBackendConnector {
@@ -18,14 +20,18 @@ export class SupabaseConnector implements PowerSyncBackendConnector {
       throw new Error('Missing VITE_POWERSYNC_URL environment variable');
     }
 
-    const token = import.meta.env.VITE_POWERSYNC_DEV_TOKEN;
-    if (!token) {
-      throw new Error('Missing VITE_POWERSYNC_DEV_TOKEN environment variable');
+    // Get existing session or sign in anonymously
+    let { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      session = data.session!;
     }
 
     return {
       endpoint: powersyncUrl,
-      token,
+      token: session.access_token,
+      expiresAt: new Date(session.expires_at! * 1000),
     };
   }
 
